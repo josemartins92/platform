@@ -294,4 +294,20 @@ class Attachment extends ExtendAttachment
     {
         return $this->organization;
     }
+
+    /**
+     * @return string
+     */
+    public function getNamePreferred()
+    {
+        return $this->namePreferred;
+    }
+
+    /**
+     * @param string $namePreferred
+     */
+    public function setNamePreferred($namePreferred)
+    {
+        $this->namePreferred = $namePreferred;
+    }
 }
