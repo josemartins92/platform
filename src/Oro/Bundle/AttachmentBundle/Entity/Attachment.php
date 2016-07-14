@@ -81,6 +81,14 @@ class Attachment extends ExtendAttachment
      */
     protected $comment;
 
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="name_preferred", type="string", length=255)
+     */
+    protected $namePreferred;
+
     /**
      * @var File
      *
