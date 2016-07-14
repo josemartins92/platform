@@ -2,156 +2,129 @@
 
 namespace Oro\Bundle\SecurityBundle\Metadata;
 
-use Oro\Bundle\SecurityBundle\Acl\Extension\AclClassInfo;
+use Doctrine\Common\Cache\CacheProvider;
 
-class ActionMetadata implements AclClassInfo, \Serializable
+class ActionMetadataProvider
 {
-    /**
-     * @var string
-     */
-    protected $name;
+    const CACHE_KEY = 'data';
 
     /**
-     * @var string
+     * @var AclAnnotationProvider
      */
-    protected $group;
+    protected $annotationProvider;
 
     /**
-     * @var string
+     * @var CacheProvider
      */
-    protected $label;
+    protected $cache;
 
     /**
-     * @var string
+     * @var array
+     *         key = action name
+     *         value = ActionMetadata
      */
-    protected $description;
-
-    /**
-     * @var string
-     */
-    protected $category;
-
-    /**
-     * Gets an action name
-     *
-     * @return string
-     */
-    public function getClassName()
-    {
-        return $this->name;
-    }
-
-    /**
-     * Gets a security group name
-     *
-     * @return string
-     */
-    public function getGroup()
-    {
-        return $this->group;
-    }
-
-    /**
-     * Gets an action label
-     *
-     * @return string
-     */
-    public function getLabel()
-    {
-        return $this->label;
-    }
-
-    /**
-     * Gets an action description
-     *
-     * @return string
-     */
-    public function getDescription()
-    {
-        return $this->description;
-    }
-
-    /**
-     * @return string
-     */
-    public function getCategory()
-    {
-        return $this->category;
-    }
-
-    /**
-     * @param string $category
-     */
-    public function setCategory($category)
-    {
-        $this->category = $category;
-    }
+    protected $localCache;
 
     /**
      * Constructor
      *
-     * @param string $name
-     * @param string $group
-     * @param string $label
-     * @param string $description
-     * @param string $category
+     * @param AclAnnotationProvider $annotationProvider
+     * @param CacheProvider|null    $cache
      */
-    public function __construct($name = '', $group = '', $label = '', $description = '', $category = '')
-    {
-        $this->name  = $name;
-        $this->group = $group;
-        $this->label = $label;
-        $this->description = $description;
-        $this->category = $category;
+    public function __construct(
+        AclAnnotationProvider $annotationProvider,
+        CacheProvider $cache = null
+    ) {
+        $this->annotationProvider = $annotationProvider;
+        $this->cache = $cache;
     }
 
     /**
-     * {@inheritdoc}
-     */
-    public function serialize()
-    {
-        return serialize(
-            array(
-                $this->name,
-                $this->group,
-                $this->label,
-                $this->description,
-                $this->category
-            )
-        );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function unserialize($serialized)
-    {
-        list(
-            $this->name,
-            $this->group,
-            $this->label,
-            $this->description,
-            $this->category
-            ) = unserialize($serialized);
-    }
-
-    /**
-     * The __set_state handler
+     * Checks whether an action with the given name is defined.
      *
-     * @param array $data Initialization array
-     * @return ActionMetadata A new instance of a ActionMetadata object
+     * @param  string $actionName The entity class name
+     * @return bool
      */
-    // @codingStandardsIgnoreStart
-    public static function __set_state($data)
+    public function isKnownAction($actionName)
     {
-        $result        = new ActionMetadata();
-        $result->name  = $data['name'];
-        $result->group = $data['group'];
-        $result->label = $data['label'];
-        $result->description = $data['description'];
-        $result->category = $data['category'];
+        $this->ensureMetadataLoaded();
 
-        return $result;
+        return isset($this->localCache[$actionName]);
     }
-    // @codingStandardsIgnoreEnd
+
+    /**
+     * Gets metadata for all actions.
+     *
+     * @return ActionMetadata[]
+     */
+    public function getActions()
+    {
+        $this->ensureMetadataLoaded();
+
+        return array_values($this->localCache);
+    }
+
+    /**
+     * Warms up the cache
+     */
+    public function warmUpCache()
+    {
+        $this->loadMetadata();
+    }
+
+    /**
+     * Clears the cache
+     */
+    public function clearCache()
+    {
+        if ($this->cache) {
+            $this->cache->delete(self::CACHE_KEY);
+        }
+        $this->localCache = null;
+    }
+
+    /**
+     * Makes sure that metadata are loaded and cached
+     */
+    protected function ensureMetadataLoaded()
+    {
+        $this->loadMetadata();
+
+        if ($this->localCache === null) {
+            $data = null;
+            if ($this->cache) {
+                $data = $this->cache->fetch(self::CACHE_KEY);
+            }
+            if ($data) {
+                $this->localCache = $data;
+            } else {
+                $this->loadMetadata();
+            }
+        }
+    }
+
+    /**
+     * Loads metadata and save them in cache
+     */
+    protected function loadMetadata()
+    {
+        $data = array();
+        foreach ($this->annotationProvider->getAnnotations('action') as $annotation) {
+            $data[$annotation->getId()] = new ActionMetadata(
+                $annotation->getId(),
+                $annotation->getGroup(),
+                $annotation->getLabel(),
+                $annotation->getDescription(),
+                $annotation->getCategory(),
+                $annotation->getIsLeme(),
+                $annotation->getPluralLabel()
+            );
+        }
+
+        if ($this->cache) {
+            $this->cache->save(self::CACHE_KEY, $data);
+        }
+
+        $this->localCache = $data;
+    }
 }
