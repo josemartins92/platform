@@ -38,4 +38,16 @@ interface AclClassInfo
      * @return string
      */
     public function getCategory();
+    /**
+     * Gets the category
+     *
+     * @return string
+     */
+    public function getIsLeme();
+    /**
+     * Gets the category
+     *
+     * @return string
+     */
+    public function getPluralLabel();
 }
