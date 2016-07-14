@@ -85,9 +85,9 @@ class Attachment extends ExtendAttachment
     /**
      * @var string
      *
-     * @ORM\Column(name="name_preferred", type="string", length=255)
+     * @ORM\Column(name="name", type="string", length=255)
      */
-    protected $namePreferred;
+    protected $name;
 
     /**
      * @var File
@@ -298,16 +298,16 @@ class Attachment extends ExtendAttachment
     /**
      * @return string
      */
-    public function getNamePreferred()
+    public function getName()
     {
-        return $this->namePreferred;
+        return $this->name;
     }
 
     /**
-     * @param string $namePreferred
+     * @param string $name
      */
-    public function setNamePreferred($namePreferred)
+    public function setName($name)
     {
-        $this->namePreferred = $namePreferred;
+        $this->name = $name;
     }
 }
