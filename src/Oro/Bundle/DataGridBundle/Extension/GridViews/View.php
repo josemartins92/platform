@@ -31,6 +31,9 @@ class View
     /** @var string|null */
     protected $sharedBy;
 
+
+    /** @var array */
+    protected $ownerData;
     /**
      * @var array
      *
@@ -42,12 +45,13 @@ class View
      */
     protected $columnsData;
 
+
     /**
      * @param string $name
-     * @param array  $filtersData
-     * @param array  $sortersData
+     * @param array $filtersData
+     * @param array $sortersData
      * @param string $type
-     * @param array  $columnsData
+     * @param array $columnsData
      */
     public function __construct(
         $name,
@@ -55,12 +59,13 @@ class View
         array $sortersData = [],
         $type = 'system',
         array $columnsData = []
-    ) {
-        $this->name        = $name;
-        $this->label       = $name;
+    )
+    {
+        $this->name = $name;
+        $this->label = $name;
         $this->filtersData = $filtersData;
         $this->sortersData = $sortersData;
-        $this->type        = $type;
+        $this->type = $type;
         $this->columnsData = $columnsData;
     }
 
@@ -244,16 +249,37 @@ class View
     public function getMetadata()
     {
         return [
-            'name'       => $this->getName(),
-            'label'      => $this->label,
-            'type'       => $this->getType(),
-            'filters'    => $this->getFiltersData(),
-            'sorters'    => $this->getSortersData(),
-            'columns'    => $this->columnsData,
-            'editable'   => $this->editable,
-            'deletable'  => $this->deletable,
+            'name' => $this->getName(),
+            'label' => $this->label,
+            'type' => $this->getType(),
+            'filters' => $this->getFiltersData(),
+            'sorters' => $this->getSortersData(),
+            'columns' => $this->columnsData,
+            'editable' => $this->editable,
+            'deletable' => $this->deletable,
             'is_default' => $this->default,
-            'shared_by'  => $this->sharedBy
+            'shared_by' => $this->sharedBy,
+            'owner' => $this->getOwnerData()
         ];
+    }
+
+
+    /**
+     * Setter for filter data
+     *
+     * @param array $ownerData
+     *
+     * @return $this
+     */
+    public function setOwnerData(array $ownerData)
+    {
+        $this->ownerData = $ownerData;
+
+        return $this;
+    }
+
+    private function getOwnerData()
+    {
+        return $this->ownerData;
     }
 }

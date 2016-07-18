@@ -70,6 +70,14 @@ class GridViewsLoadListener
             if ($gridView->getOwner()->getId() !== $currentUser->getId()) {
                 $view->setSharedBy($gridView->getOwner()->getUsername());
             }
+            $view->setOwnerData(
+                [
+                    "id" => $gridView->getOwner()->getId(),
+                    "firstName" => $gridView->getOwner()->getFirstName(),
+                    "lastName" => $gridView->getOwner()->getLastName(),
+                    "email" => $gridView->getOwner()->getEmail(),
+                ]
+            );
             $views[]   = $view->getMetadata();
         }
 
