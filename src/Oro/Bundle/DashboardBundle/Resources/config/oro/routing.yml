@@ -13,15 +13,15 @@ oro_dashboard_widget_api:
     defaults:
         version: latest
 
-oro_dashboard_api:
-    resource: Oro\Bundle\DashboardBundle\Controller\Api\Rest\DashboardController
-    type: rest
-    prefix: api/rest/{version}/
-    requirements:
-        version:  latest|v1
-        _format: json
-    defaults:
-        version: latest
+#oro_dashboard_api:
+#    resource: Oro\Bundle\DashboardBundle\Controller\Api\Rest\DashboardController
+#    type: rest
+#    prefix: api/rest/{version}/
+#    requirements:
+#        version:  latest|v1
+#        _format: json
+#    defaults:
+#        version: latest
 
 # deprecated API route
 oro_api_post_dashboard_widget_add_widget_deprecated:
