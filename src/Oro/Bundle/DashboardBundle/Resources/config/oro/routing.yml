@@ -23,6 +23,8 @@ oro_dashboard_widget_api:
 #    defaults:
 #        version: latest
 
+
+
 # deprecated API route
 oro_api_post_dashboard_widget_add_widget_deprecated:
     path:            /api/rest/{version}/dashboard/widget/add/widget.{_format}
