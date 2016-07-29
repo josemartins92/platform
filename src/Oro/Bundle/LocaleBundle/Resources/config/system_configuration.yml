@@ -99,7 +99,7 @@ oro_system_configuration:
             options:
                 label: oro.locale.system_configuration.fields.quarter_start.label
                 tooltip: oro.locale.form.tooltip.quarter_start
-                required: true
+                required: false
                 constraints:
                     - NotBlank: ~
 
@@ -110,7 +110,7 @@ oro_system_configuration:
             options:
                 label: oro.locale.system_configuration.fields.temperature_unit.label
                 tooltip: oro.locale.form.tooltip.temperature_unit
-                required: true
+                required: false
                 constraints:
                     - NotBlank: ~
                 choices:
@@ -124,7 +124,7 @@ oro_system_configuration:
             options:
                 label: oro.locale.system_configuration.fields.wind_speed_unit.label
                 tooltip: oro.locale.form.tooltip.wind_speed_unit
-                required: true
+                required: false
                 constraints:
                     - NotBlank: ~
                 choices:
