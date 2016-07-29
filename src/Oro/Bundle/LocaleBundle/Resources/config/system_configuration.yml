@@ -67,8 +67,6 @@ oro_system_configuration:
                 tooltip: oro.locale.form.tooltip.languages
                 required: true
                 multiple: true
-                constraints:
-                    - NotBlank: ~
 
         oro_locale.timezone:
             data_type: string
@@ -100,8 +98,6 @@ oro_system_configuration:
                 label: oro.locale.system_configuration.fields.quarter_start.label
                 tooltip: oro.locale.form.tooltip.quarter_start
                 required: false
-                constraints:
-                    - NotBlank: ~
 
         oro_locale.temperature_unit:
             data_type: string
@@ -111,8 +107,6 @@ oro_system_configuration:
                 label: oro.locale.system_configuration.fields.temperature_unit.label
                 tooltip: oro.locale.form.tooltip.temperature_unit
                 required: false
-                constraints:
-                    - NotBlank: ~
                 choices:
                     fahrenheit: oro.locale.system_configuration.fields.temperature_unit.choices.fahrenheit
                     celsius: oro.locale.system_configuration.fields.temperature_unit.choices.celsius
@@ -125,8 +119,6 @@ oro_system_configuration:
                 label: oro.locale.system_configuration.fields.wind_speed_unit.label
                 tooltip: oro.locale.form.tooltip.wind_speed_unit
                 required: false
-                constraints:
-                    - NotBlank: ~
                 choices:
                     miles_per_hour: oro.locale.system_configuration.fields.wind_speed_unit.choices.miles_per_hour
                     kilometers_per_hour: oro.locale.system_configuration.fields.wind_speed_unit.choices.kilometers_per_hour
@@ -145,6 +137,7 @@ oro_system_configuration:
                                         priority: 100
                                         children:
                                             - oro_locale.locale
+                                            - oro_locale.language
                                             - oro_locale.country
                                             - oro_locale.format_address_by_address_country
                                             - oro_locale.timezone
@@ -160,7 +153,6 @@ oro_system_configuration:
                                 children:
                                     language_languages:
                                         children:
-                                            - oro_locale.language
                                             - oro_locale.languages
         user_configuration:
             platform:

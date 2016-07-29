@@ -14,7 +14,7 @@ use Oro\Bundle\SecurityBundle\SecurityFacade;
 
 class SystemConfigurationFormProvider extends Provider
 {
-    const TREE_NAME                    = 'system_configuration';
+    const TREE_NAME = 'system_configuration';
     const CORRECT_FIELDS_NESTING_LEVEL = 5;
 
     /** @var FormFactoryInterface */
@@ -24,18 +24,19 @@ class SystemConfigurationFormProvider extends Provider
     protected $securityFacade;
 
     /**
-     * @param ConfigBag            $configBag
+     * @param ConfigBag $configBag
      * @param FormFactoryInterface $factory
-     * @param SecurityFacade       $securityFacade
+     * @param SecurityFacade $securityFacade
      */
     public function __construct(
         ConfigBag $configBag,
         FormFactoryInterface $factory,
         SecurityFacade $securityFacade
-    ) {
+    )
+    {
         parent::__construct($configBag);
 
-        $this->factory        = $factory;
+        $this->factory = $factory;
         $this->securityFacade = $securityFacade;
     }
 
@@ -55,7 +56,7 @@ class SystemConfigurationFormProvider extends Provider
         $block = $this->getSubtree($group);
 
         $toAdd = [];
-        $bc    = $block->toBlockConfig();
+        $bc = $block->toBlockConfig();
 
         if (!$block->isEmpty()) {
             $sbc = [];
@@ -77,7 +78,7 @@ class SystemConfigurationFormProvider extends Provider
             $bc[$block->getName()]['subblocks'] = $sbc;
         }
 
-        $fb = $this->factory->createNamedBuilder($group, 'oro_config_form_type', null, ['block_config' => $bc]);
+        $fb = $this->factory->createNamedBuilder('', 'oro_config_form_type', null, ['block_config' => $bc]);
         foreach ($toAdd as $field) {
             $this->addFieldToForm($fb, $field);
         }
@@ -126,7 +127,7 @@ class SystemConfigurationFormProvider extends Provider
 
     /**
      * @param FormBuilderInterface $form
-     * @param FieldNodeDefinition  $fieldDefinition
+     * @param FieldNodeDefinition $fieldDefinition
      */
     protected function addFieldToForm(FormBuilderInterface $form, FieldNodeDefinition $fieldDefinition)
     {
@@ -147,7 +148,7 @@ class SystemConfigurationFormProvider extends Provider
             array_flip(['label', 'required', 'block', 'subblock', 'tooltip', 'resettable'])
         );
         // pass only options needed to "value" form type
-        $configFieldOptions['target_field_type']    = $fieldDefinition->getType();
+        $configFieldOptions['target_field_type'] = $fieldDefinition->getType();
         $configFieldOptions['target_field_options'] = array_diff_key(
             $fieldDefinition->getOptions(),
             $configFieldOptions
