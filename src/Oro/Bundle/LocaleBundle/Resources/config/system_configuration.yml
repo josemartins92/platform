@@ -85,8 +85,6 @@ oro_system_configuration:
                 label: oro.locale.system_configuration.fields.currency.label
                 tooltip: oro.locale.form.tooltip.currency
                 required: true
-                constraints:
-                    - NotBlank: ~
 
         oro_locale.quarter_start:
             data_type: array
