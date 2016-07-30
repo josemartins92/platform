@@ -35,8 +35,6 @@ oro_system_configuration:
                 label: oro.locale.system_configuration.fields.country.label
                 tooltip: oro.locale.form.tooltip.location
                 required: true
-                constraints:
-                    - NotBlank: ~
 
         oro_locale.format_address_by_address_country:
             data_type: boolean
