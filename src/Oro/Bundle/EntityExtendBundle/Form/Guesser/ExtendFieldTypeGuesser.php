@@ -126,7 +126,7 @@ class ExtendFieldTypeGuesser extends AbstractFormGuesser
         switch ($fieldConfigId->getFieldType()) {
             case 'boolean':
                 $options['empty_value'] = false;
-                $options['choices'] = ['No', 'Yes'];
+                $options['choices'] = [oro.entity.entity_config.option.no, oro.entity.entity_config.option.yes];
                 break;
             case 'enum':
                 $options['enum_code'] = $this->enumConfigProvider->getConfig($className, $fieldName)

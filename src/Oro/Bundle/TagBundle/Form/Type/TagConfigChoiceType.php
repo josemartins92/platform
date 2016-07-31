@@ -21,7 +21,7 @@ class TagConfigChoiceType extends AbstractConfigType
         $resolver->setDefaults(
             [
                 'empty_value' => false,
-                'choices'     => ['No', 'Yes']
+                'choices' => ["oro.entity.entity_config.option.no", "oro.entity.entity_config.option.yes"]
             ]
         );
 
@@ -66,7 +66,7 @@ class TagConfigChoiceType extends AbstractConfigType
     protected function isImplementsTaggable($options)
     {
         /** @var EntityConfigId $configId */
-        $configId  = $options['config_id'];
+        $configId = $options['config_id'];
         $className = $configId->getClassName();
 
         if (!empty($className)) {

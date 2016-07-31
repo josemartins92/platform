@@ -18,7 +18,7 @@ oro_entity_config:
                     form:
                         type:               choice
                         options:
-                            choices:        ['No', 'Yes']
+                            choices:        [oro.entity.entity_config.option.no, oro.entity.entity_config.option.yes]
                             empty_value:    false
                             block:          other
                             label:          oro.dataaudit.entity_config.entity.items.auditable
@@ -38,7 +38,7 @@ oro_entity_config:
                     form:
                         type:               choice
                         options:
-                            choices:        ['No', 'Yes']
+                            choices:        [oro.entity.entity_config.option.no, oro.entity.entity_config.option.yes]
                             empty_value:    false
                             block:          other
                             label:          oro.dataaudit.entity_config.field.items.auditable

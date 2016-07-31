@@ -16,7 +16,7 @@ class AssociationChoiceType extends AbstractAssociationType
         $resolver->setDefaults(
             [
                 'empty_value' => false,
-                'choices'     => ['No', 'Yes'],
+                'choices'     => [oro.entity.entity_config.option.no, oro.entity.entity_config.option.yes],
                 'schema_update_required' => function ($newVal, $oldVal) {
                     return true == $newVal && false == $oldVal;
                 },

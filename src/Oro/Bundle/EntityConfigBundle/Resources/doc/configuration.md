@@ -55,7 +55,7 @@ oro_entity_config:
                     form:
                         type:               choice
                         options:
-                            choices:        ['No', 'Yes']
+                            choices:        [oro.entity.entity_config.option.no, oro.entity.entity_config.option.yes]
                             empty_value:    false
                             block:          entity
                             label:          'Auditable'
