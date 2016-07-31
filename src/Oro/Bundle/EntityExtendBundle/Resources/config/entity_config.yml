@@ -507,7 +507,7 @@ oro_entity_config:
                     form:
                         type:               choice
                         options:
-                            choices:        ['No', 'Yes']
+                            choices:        [oro.entity.entity_config.option.no, oro.entity.entity_config.option.yes]
                             empty_value:    false
                             block:          other
                             label:          oro.entity_extend.entity_config.search.field.items.searchable
@@ -525,7 +525,7 @@ oro_entity_config:
                     form:
                         type:               choice
                         options:
-                            choices:        ['No', 'Yes']
+                            choices:        [oro.entity.entity_config.option.no, oro.entity.entity_config.option.yes]
                             empty_value:    false
                             block:          other
                             label:          oro.entity_extend.entity_config.search.field.items.title_field
