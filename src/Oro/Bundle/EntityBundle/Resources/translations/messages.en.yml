@@ -23,6 +23,9 @@ oro:
             assigned:     Assigned
 
         entity_config:
+            option:
+                no: 'No'
+                yes: 'Yes'
             entity:
                 entity:
                     items:

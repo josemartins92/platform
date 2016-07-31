@@ -139,10 +139,8 @@ oro_entity_config:
                         type:               oro_entity_extend_choice
                         options:
                             choices:
-                                0: 'No'
+                                0: oro.entity.entity_config.option.no
                                 1: oro.entity.entity_config.datagrid.field.items.is_visible.shown
-                                3: oro.entity.entity_config.datagrid.field.items.is_visible.hidden
-                                2: oro.entity.entity_config.datagrid.field.items.is_visible.mandatory
                             empty_value:    false
                             block:          other
                             label:          oro.entity.entity_config.datagrid.field.items.is_visible
@@ -160,7 +158,7 @@ oro_entity_config:
                     form:
                         type:               choice
                         options:
-                            choices:        ['No', 'Yes']
+                            choices:        [oro.entity.entity_config.option.no, oro.entity.entity_config.option.yes]
                             empty_value:    false
                             block:          other
                             label:          oro.entity.entity_config.datagrid.field.items.show_filter
@@ -198,7 +196,7 @@ oro_entity_config:
                     form:
                         type:               choice
                         options:
-                            choices:        ['No', 'Yes']
+                            choices:        [oro.entity.entity_config.option.no, oro.entity.entity_config.option.yes]
                             empty_value:    false
                             block:          other
                             label:          oro.entity.entity_config.form.field.items.is_enabled
@@ -219,7 +217,7 @@ oro_entity_config:
                     form:
                         type:               choice
                         options:
-                            choices:        ['No', 'Yes']
+                            choices:        [oro.entity.entity_config.option.no, oro.entity.entity_config.option.yes]
                             empty_value:    false
                             block:          other
                             label:          oro.entity.entity_config.view.field.items.is_displayable
