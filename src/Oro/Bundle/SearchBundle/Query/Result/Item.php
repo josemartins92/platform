@@ -50,11 +50,11 @@ class Item
 
     /**
      * @param ObjectManager $em
-     * @param string|null   $entityName
-     * @param string|null   $recordId
-     * @param string|null   $recordTitle
-     * @param string|null   $recordUrl
-     * @param array         $entityConfig
+     * @param string|null $entityName
+     * @param string|null $recordId
+     * @param string|null $recordTitle
+     * @param string|null $recordUrl
+     * @param array $entityConfig
      */
     public function __construct(
         ObjectManager $em,
@@ -63,12 +63,13 @@ class Item
         $recordTitle = null,
         $recordUrl = null,
         $entityConfig = array()
-    ) {
-        $this->em           = $em;
-        $this->entityName   = $entityName;
-        $this->recordId     = empty($recordId) ? 0 : $recordId;
-        $this->recordTitle  = $recordTitle;
-        $this->recordUrl    = $recordUrl;
+    )
+    {
+        $this->em = $em;
+        $this->entityName = $entityName;
+        $this->recordId = empty($recordId) ? 0 : $recordId;
+        $this->recordTitle = $recordTitle;
+        $this->recordUrl = $recordUrl;
         $this->entityConfig = empty($entityConfig) ? array() : $entityConfig;
     }
 
@@ -190,11 +191,13 @@ class Item
      */
     public function toArray()
     {
+        $entityConfig = $this->getEntityConfig();
         return array(
-            'entity_name'   => $this->entityName,
-            'record_id'     => $this->recordId,
+            'entity_name' => $this->entityName,
+            'record_id' => $this->recordId,
             'record_string' => $this->recordTitle,
-            'record_url'    => $this->recordUrl,
+            'record_url' => $this->recordUrl,
+            'entity_alias' => (array_key_exists("alias", $entityConfig)) ? $entityConfig["alias"] : null,
         );
     }
 }
