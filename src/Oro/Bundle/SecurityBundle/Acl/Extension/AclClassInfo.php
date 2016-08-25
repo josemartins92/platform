@@ -50,4 +50,5 @@ interface AclClassInfo
      * @return string
      */
     public function getPluralLabel();
+
 }

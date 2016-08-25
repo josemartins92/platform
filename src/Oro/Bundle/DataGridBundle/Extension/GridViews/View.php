@@ -31,12 +31,18 @@ class View implements ViewInterface
     /** @var bool */
     protected $default = false;
 
+    /** @var string */
+    protected $appearanceType = false;
+
+    /** @var string */
+    protected $icon = '';
+
+    /** @var array */
+    protected $appearanceData;
+
     /** @var string|null */
     protected $sharedBy;
 
-
-    /** @var array */
-    protected $ownerData;
     /**
      * @var array
      *
@@ -48,28 +54,29 @@ class View implements ViewInterface
      */
     protected $columnsData;
 
-
     /**
      * @param string $name
      * @param array $filtersData
      * @param array $sortersData
      * @param string $type
      * @param array $columnsData
+     * @param string $appearanceType
      */
     public function __construct(
         $name,
         array $filtersData = [],
         array $sortersData = [],
         $type = 'system',
-        array $columnsData = []
-    )
-    {
-        $this->name = $name;
-        $this->label = $name;
-        $this->filtersData = $filtersData;
-        $this->sortersData = $sortersData;
-        $this->type = $type;
-        $this->columnsData = $columnsData;
+        array $columnsData = [],
+        $appearanceType = 'grid'
+    ) {
+        $this->name            = $name;
+        $this->label           = $name;
+        $this->filtersData     = $filtersData;
+        $this->sortersData     = $sortersData;
+        $this->type            = $type;
+        $this->appearanceType  = $appearanceType;
+        $this->columnsData     = $columnsData;
     }
 
     /**
@@ -92,6 +99,28 @@ class View implements ViewInterface
     public function getLabel()
     {
         return $this->label;
+    }
+
+     /**
+     * @param string $icon
+     *
+     * @return $this
+     */
+    public function setIcon($icon)
+    {
+        $this->icon = $icon;
+
+        return $this;
+    }
+
+    /**
+     * Getter for icon
+     *
+     * @return string
+     */
+    public function getIcon()
+    {
+        return $this->icon;
     }
 
     /**
@@ -197,6 +226,37 @@ class View implements ViewInterface
     }
 
     /**
+     * @return array
+     */
+    public function getAppearanceData()
+    {
+        if ($this->appearanceData === null) {
+            $this->appearanceData = [];
+        }
+
+        return $this->appearanceData;
+    }
+
+    /**
+     * @param array $appearanceData
+     * @return $this
+     */
+    public function setAppearanceData(array $appearanceData = [])
+    {
+        $this->appearanceData = $appearanceData;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getAppearanceTypeName()
+    {
+        return $this->appearanceType;
+    }
+
+    /**
      * @return boolean
      */
     public function isDefault()
@@ -258,37 +318,19 @@ class View implements ViewInterface
     public function getMetadata()
     {
         return [
-            'name' => $this->getName(),
-            'label' => $this->label,
-            'type' => $this->getType(),
-            'filters' => $this->getFiltersData(),
-            'sorters' => $this->getSortersData(),
-            'columns' => $this->columnsData,
-            'editable' => $this->editable,
-            'deletable' => $this->deletable,
-            'is_default' => $this->default,
-            'shared_by' => $this->sharedBy,
-            'owner' => $this->getOwnerData()
+            'name'           => $this->getName(),
+            'label'          => $this->label,
+            'icon'           => $this->icon,
+            'appearanceType' => $this->appearanceType,
+            'appearanceData' => $this->getAppearanceData(),
+            'type'           => $this->getType(),
+            'filters'        => $this->getFiltersData(),
+            'sorters'        => $this->getSortersData(),
+            'columns'        => $this->columnsData,
+            'editable'       => $this->editable,
+            'deletable'      => $this->deletable,
+            'is_default'     => $this->default,
+            'shared_by'      => $this->sharedBy
         ];
-    }
-
-
-    /**
-     * Setter for filter data
-     *
-     * @param array $ownerData
-     *
-     * @return $this
-     */
-    public function setOwnerData(array $ownerData)
-    {
-        $this->ownerData = $ownerData;
-
-        return $this;
-    }
-
-    private function getOwnerData()
-    {
-        return $this->ownerData;
     }
 }

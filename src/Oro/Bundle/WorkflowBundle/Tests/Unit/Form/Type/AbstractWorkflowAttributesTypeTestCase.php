@@ -23,6 +23,7 @@ use Oro\Bundle\WorkflowBundle\Model\Workflow;
 use Oro\Bundle\WorkflowBundle\Model\WorkflowRegistry;
 
 use Oro\Component\Action\Model\ContextAccessor;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 abstract class AbstractWorkflowAttributesTypeTestCase extends FormIntegrationTestCase
 {
@@ -39,9 +40,10 @@ abstract class AbstractWorkflowAttributesTypeTestCase extends FormIntegrationTes
         array $steps = array(),
         $relatedEntity = null
     ) {
-        $entityConnector = $this->getMockBuilder('Oro\Bundle\WorkflowBundle\Model\EntityConnector')
+        $doctrineHelper = $this->getMockBuilder('Oro\Bundle\EntityBundle\ORM\DoctrineHelper')
             ->disableOriginalConstructor()
             ->getMock();
+
         $aclManager = $this->getMockBuilder('Oro\Bundle\WorkflowBundle\Acl\AclManager')
             ->disableOriginalConstructor()
             ->getMock();
@@ -50,7 +52,7 @@ abstract class AbstractWorkflowAttributesTypeTestCase extends FormIntegrationTes
             ->disableOriginalConstructor()
             ->getMock();
 
-        $workflow = new Workflow($entityConnector, $aclManager, $restrictionManager);
+        $workflow = new Workflow($doctrineHelper, $aclManager, $restrictionManager);
 
         $workflow->setName($workflowName);
 
@@ -127,7 +129,8 @@ abstract class AbstractWorkflowAttributesTypeTestCase extends FormIntegrationTes
         DefaultValuesListener $defaultValuesListener = null,
         InitActionsListener $initActionListener = null,
         RequiredAttributesListener $requiredAttributesListener = null,
-        EventDispatcherInterface $dispatcher = null
+        EventDispatcherInterface $dispatcher = null,
+        AuthorizationCheckerInterface $authorizationChecker = null
     ) {
         if (!$workflowRegistry) {
             $workflowRegistry = $this->createWorkflowRegistryMock();
@@ -147,6 +150,9 @@ abstract class AbstractWorkflowAttributesTypeTestCase extends FormIntegrationTes
         if (!$dispatcher) {
             $dispatcher = $this->createDispatcherMock();
         }
+        if (!$authorizationChecker) {
+            $authorizationChecker = $this->createAuthorizationCheckerMock();
+        }
 
         return new WorkflowAttributesType(
             $workflowRegistry,
@@ -155,7 +161,8 @@ abstract class AbstractWorkflowAttributesTypeTestCase extends FormIntegrationTes
             $initActionListener,
             $requiredAttributesListener,
             new ContextAccessor(),
-            $dispatcher
+            $dispatcher,
+            $authorizationChecker
         );
     }
 
@@ -211,5 +218,10 @@ abstract class AbstractWorkflowAttributesTypeTestCase extends FormIntegrationTes
         return $this->getMockBuilder('Symfony\Component\EventDispatcher\EventDispatcherInterface')
             ->disableOriginalConstructor()
             ->getMock();
+    }
+
+    protected function createAuthorizationCheckerMock()
+    {
+        return $this->getMock('Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface');
     }
 }
