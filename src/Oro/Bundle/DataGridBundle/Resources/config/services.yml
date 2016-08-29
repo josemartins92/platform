@@ -170,6 +170,7 @@ services:
             - '@doctrine'
             - '@oro_datagrid.datagrid.manager'
             - '@oro_datagrid.datagrid.board.restriction_manager'
+            - '@translator'
 
     oro_datagrid.appearance_type.manager:
         class: Oro\Bundle\DataGridBundle\Entity\Manager\AppearanceTypeManager
