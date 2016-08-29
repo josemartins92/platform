@@ -130,9 +130,8 @@ oro_system_configuration:
                 label: oro.locale.system_configuration.fields.enabled_localizations.label
                 required: true
                 multiple: true
-                resettable: false
-                constraints:
-                    - NotBlank: ~
+                resettable: true
+
 
         oro_locale.default_localization:
             data_type: string
@@ -142,11 +141,7 @@ oro_system_configuration:
                 label: oro.locale.system_configuration.fields.default_localization.label
                 required: true
                 multiple: false
-                resettable: false
-                constraints:
-                    - Oro\Bundle\LocaleBundle\Validator\Constraints\DefaultLocalization: ~
-                    - NotBlank: ~
-
+                resettable: true
     tree:
         system_configuration:
             platform:

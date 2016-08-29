@@ -31,7 +31,7 @@ class LanguageType extends AbstractType
     {
         $resolver->setDefaults(
             array(
-                'choices'     => array_flip($this->getLanguageChoices()),
+                'choices' => array_flip($this->getLanguageChoices()),
                 'choices_as_values' => true,
                 'empty_value' => 'Please select...',
             )
@@ -44,7 +44,7 @@ class LanguageType extends AbstractType
     protected function getLanguageChoices()
     {
         // ensure that default value is always in choice list
-        $defaultValue          = $this->cm->get(self::CONFIG_KEY, true);
+        $defaultValue = $this->cm->get(self::CONFIG_KEY, true);
         $availableTranslations = (array)$this->cm->get(TranslationStatusInterface::CONFIG_KEY);
         $availableTranslations = array_filter(
             $availableTranslations,
@@ -52,11 +52,12 @@ class LanguageType extends AbstractType
                 return $languageStatus === TranslationStatusInterface::STATUS_ENABLED;
             }
         );
-        $availableLanguages    = array_merge(array_keys($availableTranslations), [$defaultValue]);
+        $availableLanguages = array_merge(array_keys($availableTranslations), [$defaultValue]);
 
         $allLanguages = Intl::getLocaleBundle()->getLocaleNames('en');
 
-        return array_intersect_key($allLanguages, array_flip($availableLanguages));
+//        return array_intersect_key($allLanguages, array_flip($availableLanguages));
+        return $allLanguages;
     }
 
     /**
