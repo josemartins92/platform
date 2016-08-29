@@ -89,7 +89,6 @@ class GridViewsLoadListener
             }
             $views[]   = $view->getMetadata();
         }
-
         $event->setGridViews($views);
     }
 
