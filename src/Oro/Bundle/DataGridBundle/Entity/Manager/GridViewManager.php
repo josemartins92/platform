@@ -4,6 +4,9 @@ namespace Oro\Bundle\DataGridBundle\Entity\Manager;
 
 use Doctrine\Bundle\DoctrineBundle\Registry;
 
+use Symfony\Component\Translation\TranslatorInterface;
+
+
 use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
 use Oro\Bundle\DataGridBundle\Datagrid\Manager;
 use Oro\Bundle\DataGridBundle\Entity\GridView;
@@ -44,6 +47,9 @@ class GridViewManager
     /** @var RestrictionManager */
     protected $restrictionManager;
 
+    /** @var TranslatorInterface */
+    protected $translator;
+
     /** @var array  */
     protected $gridConfigurations = [];
 
@@ -52,18 +58,21 @@ class GridViewManager
      * @param Registry $registry
      * @param Manager $gridManager
      * @param RestrictionManager $restrictionManager
+     * @param TranslatorInterface $translator
      */
     public function __construct(
         AclHelper $aclHelper,
         Registry $registry,
         Manager $gridManager,
-        RestrictionManager $restrictionManager
+        RestrictionManager $restrictionManager,
+        TranslatorInterface $translator
     ) {
         $this->aclHelper = $aclHelper;
         $this->registry  = $registry;
         $this->registry = $registry;
         $this->gridManager = $gridManager;
         $this->restrictionManager = $restrictionManager;
+        $this->translator = $translator;
     }
 
     /**
@@ -146,7 +155,12 @@ class GridViewManager
         if (!isset($this->cacheData[self::SYSTEM_VIEWS_KEY])) {
             $config = $this->getConfigurationForGrid($gridName);
             $list = $config->offsetGetOr(GridViewsExtension::VIEWS_LIST_KEY, false);
-            $gridViews[] = new View(GridViewsExtension::DEFAULT_VIEW_ID);
+            $systemGridView = new View(GridViewsExtension::DEFAULT_VIEW_ID);
+            if ($config->offsetGetByPath('[options][gridViews][allLabel]')) {
+                $systemGridView->setLabel($this->translator->trans($config['options']['gridViews']['allLabel']));
+            }
+            $gridViews[] = $systemGridView;
+
             if ($list) {
                 $list = $this->applyAppearanceRestrictions($list->getList()->getValues(), $gridName);
                 $gridViews = array_merge($gridViews, $list);
