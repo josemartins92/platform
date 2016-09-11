@@ -38,6 +38,9 @@ use Oro\Bundle\EntityBundle\EntityProperty\UpdatedByAwareTrait;
  *          },
  *          "activity"={
  *              "immutable"=true
+ *          },
+ *          "dataaudit"={
+ *              "auditable"=true
  *          }
  *      }
  * )
@@ -151,4 +154,23 @@ class Note extends ExtendNote implements DatesAwareInterface, UpdatedByAwareInte
     {
         return $this->organization;
     }
+
+    public function __toString()
+    {
+        return $this->getShortMessage();
+    }
+
+    /**
+     * @return string
+     */
+    protected function getShortMessage()
+    {
+        $string = strip_tags($this->getMessage());
+        if (strlen($string) > 500) {
+            $stringCut = substr($string, 0, 100);
+            $string = substr($stringCut, 0, strrpos($stringCut, ' '));
+        }
+        return $string;
+    }
+
 }
