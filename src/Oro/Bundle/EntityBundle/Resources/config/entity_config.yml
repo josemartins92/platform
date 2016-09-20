@@ -160,7 +160,7 @@ oro_entity_config:
                     form:
                         type:               choice
                         options:
-                            choices:        ['No', 'Yes']
+                            choices:        [oro.entity.entity_config.options.no, oro.entity.entity_config.options.yes]
                             empty_value:    false
                             block:          other
                             label:          oro.entity.entity_config.datagrid.field.items.show_filter
@@ -198,7 +198,7 @@ oro_entity_config:
                     form:
                         type:               choice
                         options:
-                            choices:        ['No', 'Yes']
+                            choices:        [oro.entity.entity_config.options.no, oro.entity.entity_config.options.yes]
                             empty_value:    false
                             block:          other
                             label:          oro.entity.entity_config.form.field.items.is_enabled
@@ -219,7 +219,7 @@ oro_entity_config:
                     form:
                         type:               choice
                         options:
-                            choices:        ['No', 'Yes']
+                            choices:        [oro.entity.entity_config.options.no, oro.entity.entity_config.options.yes]
                             empty_value:    false
                             block:          other
                             label:          oro.entity.entity_config.view.field.items.is_displayable

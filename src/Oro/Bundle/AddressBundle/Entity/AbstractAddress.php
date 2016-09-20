@@ -52,7 +52,8 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
-     *              "order"=10
+     *              "order"=10,
+     *              "excluded"=true
      *          }
      *      }
      * )
@@ -83,7 +84,8 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
-     *              "order"=90
+     *              "order"=90,
+     *              "excluded"=true
      *          }
      *      }
      * )
@@ -211,7 +213,8 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
-     *              "order"=40
+     *              "order"=40,
+     *              "excluded"=true
      *          }
      *      }
      * )
@@ -226,7 +229,8 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
-     *              "order"=50
+     *              "order"=50,
+     *              "excluded"=true
      *          }
      *      }
      * )
@@ -241,7 +245,8 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
-     *              "order"=60
+     *              "order"=60,
+     *              "excluded"=true
      *          }
      *      }
      * )
@@ -256,7 +261,8 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
-     *              "order"=70
+     *              "order"=70,
+     *              "excluded"=true
      *          }
      *      }
      * )
@@ -312,7 +318,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      *
      * @param int $id
      * @return AbstractAddress
-     * @deprecated since 1.10, to be removed in 2.0
      */
     public function setId($id)
     {
@@ -824,15 +829,15 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
     public function isEmpty()
     {
         return empty($this->label)
-            && empty($this->firstName)
-            && empty($this->lastName)
-            && empty($this->street)
-            && empty($this->street2)
-            && empty($this->city)
-            && empty($this->region)
-            && empty($this->regionText)
-            && empty($this->country)
-            && empty($this->postalCode);
+        && empty($this->firstName)
+        && empty($this->lastName)
+        && empty($this->street)
+        && empty($this->street2)
+        && empty($this->city)
+        && empty($this->region)
+        && empty($this->regionText)
+        && empty($this->country)
+        && empty($this->postalCode);
     }
 
     /**

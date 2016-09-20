@@ -41,7 +41,7 @@ oro_entity_config:
                         options:
                             label:          oro.importexport.entity_config.identity.label
                             choices:
-                                false:      'No'
+                                false:      oro.entity.entity_config.options.no
                                 -1:         oro.importexport.entity_config.identity.only_when_not_empty
                                 true:       oro.importexport.entity_config.identity.always
                             empty_value:    false
@@ -57,8 +57,8 @@ oro_entity_config:
                         options:
                             label:          oro.importexport.entity_config.excluded.label
                             choices:
-                                false:      'No'
-                                true:       'Yes'
+                                false:      oro.entity.entity_config.options.no
+                                true:       oro.entity.entity_config.options.yes
                             empty_value:    false
                             required:       false
                             block:          import_export
