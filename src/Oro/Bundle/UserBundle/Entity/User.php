@@ -112,7 +112,7 @@ class User extends ExtendUser implements
      *              "auditable"=true
      *          },
      *          "importexport"={
-     *              "identity"=true
+     *              "identity"=false
      *          }
      *      }
      * )
