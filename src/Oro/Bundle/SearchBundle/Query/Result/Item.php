@@ -218,11 +218,14 @@ class Item
      */
     public function toArray()
     {
+        $entityConfig = $this->getEntityConfig();
         $result = [
             'entity_name'   => $this->entityName,
             'record_id'     => $this->recordId,
             'record_string' => $this->recordTitle,
             'record_url'    => $this->recordUrl,
+            'alias'         => (array_key_exists("alias",$entityConfig))?$entityConfig["alias"]:null,
+
         ];
 
         if (count($this->selectedData) > 0) {

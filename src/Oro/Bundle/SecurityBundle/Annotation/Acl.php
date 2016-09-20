@@ -52,6 +52,15 @@ class Acl implements \Serializable
      * @var string
      */
     private $category;
+    /**
+     * @var bool
+     */
+    private $leme;
+
+    /**
+     * @var string
+     */
+    private $pluralLabel;
 
     /**
      * Constructor
@@ -84,6 +93,8 @@ class Acl implements \Serializable
         $this->label          = isset($data['label']) ? $data['label'] : '';
         $this->description    = isset($data['description']) ? $data['description'] : '';
         $this->category       = isset($data['category']) ? $data['category'] : '';
+        $this->leme       = isset($data['leme']) ? $data['leme'] : '';
+        $this->pluralLabel       = isset($data['pluralLabel']) ? $data['pluralLabel'] : '';
     }
 
     /**
@@ -205,6 +216,22 @@ class Acl implements \Serializable
     }
 
     /**
+     * @param string $category
+     */
+    public function getIsLeme()
+    {
+        return  $this->leme ;
+    }
+
+    /**
+     * @param string $category
+     */
+    public function getPluralLabel()
+    {
+        return  $this->pluralLabel ;
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function serialize()
@@ -219,7 +246,8 @@ class Acl implements \Serializable
                 $this->group,
                 $this->label,
                 $this->description,
-                $this->category
+                $this->category,
+                $this->leme,
             )
         );
     }
@@ -238,7 +266,9 @@ class Acl implements \Serializable
             $this->group,
             $this->label,
             $this->description,
-            $this->category
+            $this->category,
+            $this->leme,
+
             ) = unserialize($serialized);
     }
 
@@ -261,7 +291,7 @@ class Acl implements \Serializable
         $result->label          = $data['label'];
         $result->description    = $data['description'];
         $result->category       = $data['category'];
-
+        $result->leme           =   $data['leme'];
         return $result;
     }
     // @codingStandardsIgnoreEnd

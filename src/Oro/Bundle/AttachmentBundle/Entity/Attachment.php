@@ -43,6 +43,9 @@ use Oro\Bundle\OrganizationBundle\Entity\Organization;
  *          },
  *          "activity"={
  *              "immutable"=true
+ *          },
+ *          "dataaudit"={
+ *              "auditable"=true
  *          }
  *      }
  * )
@@ -80,6 +83,14 @@ class Attachment extends ExtendAttachment
      * @ORM\Column(name="comment", type="text", nullable=true)
      */
     protected $comment;
+
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="name", type="string", length=255)
+     */
+    protected $name;
 
     /**
      * @var File
@@ -285,5 +296,21 @@ class Attachment extends ExtendAttachment
     public function getOrganization()
     {
         return $this->organization;
+    }
+
+    /**
+     * @return string
+     */
+    public function getName()
+    {
+        return $this->name;
+    }
+
+    /**
+     * @param string $name
+     */
+    public function setName($name)
+    {
+        $this->name = $name;
     }
 }
