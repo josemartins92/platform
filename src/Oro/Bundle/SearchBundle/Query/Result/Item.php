@@ -49,12 +49,19 @@ class Item
     protected $em;
 
     /**
+     * @Soap\ComplexType("Oro\Bundle\SearchBundle\Soap\Type\SelectedValue[]")
+     * @var string[]
+     */
+    protected $selectedData = [];
+
+    /**
      * @param ObjectManager $em
-     * @param string|null $entityName
-     * @param string|null $recordId
-     * @param string|null $recordTitle
-     * @param string|null $recordUrl
-     * @param array $entityConfig
+     * @param string|null   $entityName
+     * @param string|null   $recordId
+     * @param string|null   $recordTitle
+     * @param string|null   $recordUrl
+     * @param array         $selectedData
+     * @param array         $entityConfig
      */
     public function __construct(
         ObjectManager $em,
@@ -62,15 +69,16 @@ class Item
         $recordId = null,
         $recordTitle = null,
         $recordUrl = null,
-        $entityConfig = array()
-    )
-    {
-        $this->em = $em;
-        $this->entityName = $entityName;
-        $this->recordId = empty($recordId) ? 0 : $recordId;
-        $this->recordTitle = $recordTitle;
-        $this->recordUrl = $recordUrl;
-        $this->entityConfig = empty($entityConfig) ? array() : $entityConfig;
+        $selectedData = [],
+        $entityConfig = []
+    ) {
+        $this->em           = $em;
+        $this->entityName   = $entityName;
+        $this->recordId     = empty($recordId) ? 0 : $recordId;
+        $this->recordTitle  = $recordTitle;
+        $this->recordUrl    = $recordUrl;
+        $this->entityConfig = empty($entityConfig) ? [] : $entityConfig;
+        $this->selectedData = is_array($selectedData) ? $selectedData : [];
     }
 
     /**
@@ -189,15 +197,41 @@ class Item
     /**
      * @return array
      */
+    public function getSelectedData()
+    {
+        return $this->selectedData;
+    }
+
+    /**
+     * @param array $selectedData
+     * @return $this
+     */
+    public function setSelectedData(array $selectedData)
+    {
+        $this->selectedData = $selectedData;
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
     public function toArray()
     {
+
         $entityConfig = $this->getEntityConfig();
-        return array(
+        $result= array(
             'entity_name' => $this->entityName,
             'record_id' => $this->recordId,
             'record_string' => $this->recordTitle,
             'record_url' => $this->recordUrl,
             'entity_alias' => (array_key_exists("alias", $entityConfig)) ? $entityConfig["alias"] : null,
         );
+
+        if (count($this->selectedData) > 0) {
+            $result['selected_data'] = $this->selectedData;
+        }
+
+        return $result;
     }
 }
