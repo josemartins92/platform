@@ -4,7 +4,6 @@ namespace Oro\Bundle\ImportExportBundle\Field;
 
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
-use Symfony\Component\PropertyAccess\PropertyPath;
 use Symfony\Component\PropertyAccess\Exception\NoSuchPropertyException;
 use Symfony\Component\PropertyAccess\Exception\InvalidArgumentException;
 
@@ -15,8 +14,8 @@ use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
 use Oro\Bundle\EntityExtendBundle\Extend\FieldTypeHelper;
 
 /**
- * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
 class FieldHelper
 {
@@ -276,15 +275,8 @@ class FieldHelper
      */
     public function setObjectValue($object, $fieldName, $value)
     {
-        $propertyPath = new PropertyPath($fieldName);
-
-        if (null === $value && $propertyPath->getLength() === 1) {
-            $this->setObjectValueWithReflection($object, $fieldName, $value);
-            return;
-        }
-
         try {
-            $this->getPropertyAccessor()->setValue($object, $propertyPath, $value);
+            $this->getPropertyAccessor()->setValue($object, $fieldName, $value);
         } catch (NoSuchPropertyException $e) {
             $this->setObjectValueWithReflection($object, $fieldName, $value, $e);
         } catch (\TypeError $e) {
@@ -306,18 +298,10 @@ class FieldHelper
      * @param NoSuchPropertyException|\TypeError|\ErrorException|InvalidArgumentException $exception
      * @throws NoSuchPropertyException|\TypeError|\ErrorException|InvalidArgumentException
      */
-    protected function setObjectValueWithReflection($object, $fieldName, $value, $exception = null)
+    protected function setObjectValueWithReflection($object, $fieldName, $value, $exception)
     {
         $class = ClassUtils::getClass($object);
         while (!property_exists($class, $fieldName) && $class = get_parent_class($class)) {
-        }
-
-        if ($exception === null) {
-            $exception = new NoSuchPropertyException(sprintf(
-                'Property "%s" does not exist in class "%s"',
-                $fieldName,
-                $class
-            ));
         }
 
         if ($class) {

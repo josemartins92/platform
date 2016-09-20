@@ -96,62 +96,40 @@ class ConfigManager
      * Get setting value
      *
      * @param string $name Setting name, for example "oro_user.level"
-     * @param bool $default
-     * @param bool $full
-     * @param null|int|object $scopeIdentifier
+     * @param bool   $default
+     * @param bool   $full
      *
      * @return mixed
      */
-    public function get($name, $default = false, $full = false, $scopeIdentifier = null)
+    public function get($name, $default = false, $full = false)
     {
-
         // full and default values are not cached locally
         if ($full || $default) {
-            return $this->getValue($name, $default, $full, $scopeIdentifier);
+            return $this->getValue($name, $default, $full);
         }
 
         // try to get a value from a local cache
-        $entityId = $this->resolveIdentifier($scopeIdentifier);
-        if ($this->localCache->hasValue($this->scope, $entityId, $name)) {
-            return $this->localCache->getValue($this->scope, $entityId, $name);
+        $scopeId = $this->getScopeId();
+        if ($this->localCache->hasValue($this->scope, $scopeId, $name)) {
+            return $this->localCache->getValue($this->scope, $scopeId, $name);
         }
 
-        $value = $this->getValue($name, $default, $full, $scopeIdentifier);
+        $value = $this->getValue($name, $default, $full);
 
         // put to a local cache
-        $this->localCache->setValue($this->scope, $entityId, $name, $value);
+        $this->localCache->setValue($this->scope, $scopeId, $name, $value);
 
         return $value;
-    }
-
-    /**
-     * Get settings for given entities.
-     *
-     * @param string $name
-     * @param array|int[]|object[] $scopeIdentifiers
-     * @param bool $default
-     * @param bool $full
-     * @return array
-     */
-    public function getValues($name, array $scopeIdentifiers, $default = false, $full = false)
-    {
-        $result = [];
-        foreach ($scopeIdentifiers as $scopeIdentifier) {
-            $result[$this->resolveIdentifier($scopeIdentifier)] = $this->get($name, $default, $full, $scopeIdentifier);
-        }
-
-        return $result;
     }
 
     /**
      * Get Additional Info of Config Value
      *
      * @param $name
-     * @param null|int|object $scopeIdentifier
      *
      * @return array
      */
-    public function getInfo($name, $scopeIdentifier = null)
+    public function getInfo($name)
     {
         $createdValues = [];
         $updatedValues = [];
@@ -160,7 +138,7 @@ class ConfigManager
         $valueWasFind = false;
 
         foreach ($this->managers as $manager) {
-            list($created, $updated, $isNullValue) = $manager->getInfo($name, $scopeIdentifier);
+            list($created, $updated, $isNullValue) = $manager->getInfo($name);
             if (!$isNullValue) {
                 $createdValue = $created;
                 $updatedValue = $updated;
@@ -176,10 +154,10 @@ class ConfigManager
         }
 
         if (!$valueWasFind) {
-            if (count($createdValues) > 0) {
+            if (!empty($createdValues)) {
                 $createdValue = min($createdValues);
             }
-            if (count($updatedValues) > 0) {
+            if (!empty($updatedValues)) {
                 $updatedValue = max($updatedValues);
             }
         }
@@ -190,48 +168,44 @@ class ConfigManager
     /**
      * Set setting value. To save changes in a database you need to call flush method
      *
-     * @param string $name Setting name, for example "oro_user.level"
-     * @param mixed $value Setting value
-     * @param null|int|object $scopeIdentifier
+     * @param string $name  Setting name, for example "oro_user.level"
+     * @param mixed  $value Setting value
      */
-    public function set($name, $value, $scopeIdentifier = null)
+    public function set($name, $value)
     {
-        $this->getScopeManager()->set($name, $value, $scopeIdentifier);
+        $this->getScopeManager()->set($name, $value);
 
         // put to a local cache
-        $this->localCache->setValue($this->scope, $this->resolveIdentifier($scopeIdentifier), $name, $value);
+        $this->localCache->setValue($this->scope, $this->getScopeId(), $name, $value);
     }
 
     /**
      * Reset setting value to default. To save changes in a database you need to call flush method
      *
      * @param string $name Setting name, for example "oro_user.level"
-     * @param null|int|object $scopeIdentifier
      */
-    public function reset($name, $scopeIdentifier = null)
+    public function reset($name)
     {
-        $this->getScopeManager()->reset($name, $scopeIdentifier);
+        $this->getScopeManager()->reset($name);
 
         // remove from a local cache
-        $this->localCache->removeValue($this->scope, $this->resolveIdentifier($scopeIdentifier), $name);
+        $this->localCache->removeValue($this->scope, $this->getScopeId(), $name);
     }
 
     /**
      * Save changes made with set or reset methods in a database
-     * @param null|int|object $scopeIdentifier
      */
-    public function flush($scopeIdentifier = null)
+    public function flush()
     {
-        $this->save($this->getScopeManager()->getChanges($scopeIdentifier), $scopeIdentifier);
+        $this->save($this->getScopeManager()->getChanges());
     }
 
     /**
      * Save settings
      *
      * @param array $settings
-     * @param null|int|object $scopeIdentifier
      */
-    public function save($settings, $scopeIdentifier = null)
+    public function save($settings)
     {
         $settings = $this->normalizeSettings($settings);
         if (empty($settings)) {
@@ -240,19 +214,19 @@ class ConfigManager
 
         $oldValues = [];
         foreach ($settings as $name => $value) {
-            $oldValues[$name] = $this->getValue($name, false, false, $scopeIdentifier);
+            $oldValues[$name] = $this->getValue($name);
         }
 
         $event = new ConfigSettingsUpdateEvent($this, $settings);
         $this->eventDispatcher->dispatch(ConfigSettingsUpdateEvent::BEFORE_SAVE, $event);
 
-        list($updated, $removed) = $this->getScopeManager()->save($event->getSettings(), $scopeIdentifier);
-
-        // clear a local cache
-        $this->localCache->clear();
+        list($updated, $removed) = $this->getScopeManager()->save($event->getSettings());
 
         $event = new ConfigUpdateEvent($this->buildChangeSet($updated, $removed, $oldValues));
         $this->eventDispatcher->dispatch(ConfigUpdateEvent::EVENT_NAME, $event);
+
+        // clear a local cache
+        $this->localCache->clear();
     }
 
     /**
@@ -260,25 +234,23 @@ class ConfigManager
      * Does not modify anything, so even if you call flush after calculating you will not persist any changes
      *
      * @param array $settings
-     * @param null|int|object $scopeIdentifier
      *
      * @return array [updated,              removed]
      *               [[name => value, ...], [name, ...]]
      */
-    public function calculateChangeSet(array $settings, $scopeIdentifier = null)
+    public function calculateChangeSet(array $settings)
     {
         $settings = $this->normalizeSettings($settings);
 
-        return $this->getScopeManager()->calculateChangeSet($settings, $scopeIdentifier);
+        return $this->getScopeManager()->calculateChangeSet($settings);
     }
 
     /**
      * Reload settings data
-     * @param null|int|object $scopeIdentifier
      */
-    public function reload($scopeIdentifier = null)
+    public function reload()
     {
-        $this->getScopeManager()->reload($scopeIdentifier);
+        $this->getScopeManager()->reload();
 
         // clear a local cache
         $this->localCache->clear();
@@ -343,11 +315,10 @@ class ConfigManager
      * @param mixed $value
      * @param string $name Config name
      * @param bool $full
-     * @param null|int|object $scopeIdentifier
      *
      * @return mixed
      */
-    public function getMergedWithParentValue($value, $name, $full = false, $scopeIdentifier = null)
+    public function getMergedWithParentValue($value, $name, $full = false)
     {
         if (!$this->isArrayValue($value, $full)) {
             return $value;
@@ -359,7 +330,7 @@ class ConfigManager
         // merge missing sub-values with those defined in the parent scopes
         $managers = $this->getScopeManagersToGetValue(false);
         foreach ($managers as $scopeName => $manager) {
-            $scopeValue = $manager->getSettingValue($name, $full, $scopeIdentifier);
+            $scopeValue = $manager->getSettingValue($name, $full);
             $currentValue = array_merge((array) $this->getPlainValue($scopeValue, $full), $currentValue);
         }
 
@@ -376,19 +347,17 @@ class ConfigManager
 
     /**
      * @param string $name
-     * @param bool $default
-     * @param bool $full
-     * @param null|int $scopeIdentifier
+     * @param bool   $default
+     * @param bool   $full
      *
      * @return mixed
      */
-    protected function getValue($name, $default = false, $full = false, $scopeIdentifier = null)
+    protected function getValue($name, $default = false, $full = false)
     {
-        $value = null;
-        $scopeId = $this->resolveIdentifier($scopeIdentifier);
+        $value    = null;
         $managers = $this->getScopeManagersToGetValue($default);
         foreach ($managers as $scopeName => $manager) {
-            $value = $manager->getSettingValue($name, $full, $scopeIdentifier);
+            $value = $manager->getSettingValue($name, $full);
             if (null !== $value) {
                 // in case if we get value not from current scope,
                 // we should mark value that it was get from another scope
@@ -399,7 +368,7 @@ class ConfigManager
             }
         }
 
-        $event = new ConfigGetEvent($this, $name, $value, $full, $scopeId);
+        $event = new ConfigGetEvent($this, $name, $value, $full);
         $this->eventDispatcher->dispatch(ConfigGetEvent::NAME, $event);
         $this->eventDispatcher->dispatch(sprintf('%s.%s', ConfigGetEvent::NAME, $name), $event);
 
@@ -480,7 +449,7 @@ class ConfigManager
     }
 
     /**
-     * @param array $settings
+     * @param array|null $settings
      *
      * @return array
      */
@@ -488,15 +457,13 @@ class ConfigManager
     {
         // normalize names and remove unknown settings
         $normalizedSettings = [];
-        if (is_array($settings)) {
-            foreach ($settings as $name => $value) {
-                list($section, $key) = explode(
-                    ConfigManager::SECTION_MODEL_SEPARATOR,
-                    str_replace(self::SECTION_VIEW_SEPARATOR, self::SECTION_MODEL_SEPARATOR, $name)
-                );
-                if (!empty($this->settings[$section][$key])) {
-                    $normalizedSettings[$section . self::SECTION_MODEL_SEPARATOR . $key] = $value;
-                }
+        foreach ($settings as $name => $value) {
+            list($section, $key) = explode(
+                ConfigManager::SECTION_MODEL_SEPARATOR,
+                str_replace(self::SECTION_VIEW_SEPARATOR, self::SECTION_MODEL_SEPARATOR, $name)
+            );
+            if (!empty($this->settings[$section][$key])) {
+                $normalizedSettings[$section . self::SECTION_MODEL_SEPARATOR . $key] = $value;
             }
         }
 
@@ -507,11 +474,10 @@ class ConfigManager
      * @param array $updated
      * @param array $removed
      * @param array $oldValues
-     * @param null|int|object $scopeIdentifier
      *
      * @return array
      */
-    protected function buildChangeSet(array $updated, array $removed, array $oldValues, $scopeIdentifier = null)
+    protected function buildChangeSet(array $updated, array $removed, array $oldValues)
     {
         $changeSet = [];
         foreach ($updated as $name => $value) {
@@ -522,21 +488,12 @@ class ConfigManager
         }
         foreach ($removed as $name) {
             $oldValue = isset($oldValues[$name]) ? $oldValues[$name] : null;
-            $value    = $this->getValue($name, true, false, $scopeIdentifier);
+            $value    = $this->getValue($name, true);
             if ($oldValue != $value) {
                 $changeSet[$name] = ['old' => $oldValue, 'new' => $value];
             }
         }
 
         return $changeSet;
-    }
-
-    /**
-     * @param int|null|object $scopeIdentifier
-     * @return int|null
-     */
-    protected function resolveIdentifier($scopeIdentifier)
-    {
-        return $this->getScopeManager()->resolveIdentifier($scopeIdentifier);
     }
 }

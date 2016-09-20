@@ -75,49 +75,36 @@ class ConfigManagerTest extends \PHPUnit_Framework_TestCase
         $this->userScopeManager   = $this->getMockBuilder('Oro\Bundle\ConfigBundle\Config\GlobalScopeManager')
             ->disableOriginalConstructor()
             ->getMock();
+        $this->userScopeManager->expects($this->any())
+            ->method('getScopeId')
+            ->willReturn(123);
 
         $this->manager->addManager('user', $this->userScopeManager);
         $this->manager->addManager('global', $this->globalScopeManager);
     }
 
-    /**
-     * @dataProvider scopeIdentifierDataProvider
-     *
-     * @param int|null|object $scopeIdentifier
-     */
-    public function testSet($scopeIdentifier)
+    public function testSet()
     {
         $name  = 'testName';
         $value = 'testValue';
         $this->userScopeManager->expects($this->once())
             ->method('set')
-            ->with($name, $value, $scopeIdentifier);
+            ->with($name, $value);
 
-        $this->manager->set($name, $value, $scopeIdentifier);
+        $this->manager->set($name, $value);
     }
 
-    /**
-     * @dataProvider scopeIdentifierDataProvider
-     *
-     * @param int|null|object $scopeIdentifier
-     */
-    public function testReset($scopeIdentifier)
+    public function testReset()
     {
         $name = 'testName.testValue';
         $this->userScopeManager->expects($this->once())
             ->method('reset')
-            ->with($name, $scopeIdentifier);
+            ->with($name);
 
-        $this->manager->reset($name, $scopeIdentifier);
+        $this->manager->reset($name);
     }
 
-    /**
-     * @dataProvider scopeIdentifierDataProvider
-     *
-     * @param int|null|object $scopeIdentifier
-     * @param int $idValue
-     */
-    public function testFlush($scopeIdentifier, $idValue)
+    public function testFlush()
     {
         $greetingKey = 'oro_user.greeting';
         $changes = [
@@ -139,14 +126,11 @@ class ConfigManagerTest extends \PHPUnit_Framework_TestCase
             ]
         );
 
-        $loadEvent = new ConfigGetEvent($this->manager, $greetingKey, 'old value', false, $idValue);
+        $loadEvent = new ConfigGetEvent($this->manager, $greetingKey, 'old value', false);
 
         $this->userScopeManager->expects($this->once())
             ->method('getChanges')
             ->willReturn($changes);
-        $this->userScopeManager->expects($this->any())
-            ->method('resolveIdentifier')
-            ->willReturn($idValue);
 
         $this->userScopeManager->expects($this->once())
             ->method('save')
@@ -167,16 +151,10 @@ class ConfigManagerTest extends \PHPUnit_Framework_TestCase
                 [ConfigUpdateEvent::EVENT_NAME, $afterEvent]
             );
 
-        $this->manager->flush($scopeIdentifier);
+        $this->manager->flush();
     }
 
-    /**
-     * @dataProvider scopeIdentifierDataProvider
-     *
-     * @param int|null|object $scopeIdentifier
-     * @param int $idValue
-     */
-    public function testSave($scopeIdentifier, $idValue)
+    public function testSave()
     {
 
         $greetingKey = 'oro_user.greeting';
@@ -205,15 +183,12 @@ class ConfigManagerTest extends \PHPUnit_Framework_TestCase
             ]
         ];
 
-        $this->userScopeManager->expects($this->any())
-            ->method('resolveIdentifier')
-            ->willReturn($idValue);
         $this->userScopeManager->expects($this->exactly(2))
             ->method('getSettingValue')
             ->willReturnMap(
                 [
-                    [$greetingKey, false, $scopeIdentifier, 'old value'],
-                    [$levelKey, false, $scopeIdentifier, 2000]
+                    [$greetingKey, false, 'old value'],
+                    [$levelKey, false, 2000]
                 ]
             );
 
@@ -225,9 +200,9 @@ class ConfigManagerTest extends \PHPUnit_Framework_TestCase
             ]
         );
 
-        $greetingOldValueLoadEvent = new ConfigGetEvent($this->manager, $greetingKey, 'old value', false, $idValue);
-        $levelOldValueLoadEvent = new ConfigGetEvent($this->manager, $levelKey, '2000', false, $idValue);
-        $levelNullValueLoadEvent = new ConfigGetEvent($this->manager, $levelKey, null, false, $idValue);
+        $greetingOldValueLoadEvent = new ConfigGetEvent($this->manager, $greetingKey, 'old value', false);
+        $levelOldValueLoadEvent = new ConfigGetEvent($this->manager, $levelKey, '2000', false);
+        $levelNullValueLoadEvent = new ConfigGetEvent($this->manager, $levelKey, null, false);
 
         $this->userScopeManager->expects($this->once())
             ->method('save')
@@ -252,22 +227,17 @@ class ConfigManagerTest extends \PHPUnit_Framework_TestCase
                 [ConfigUpdateEvent::EVENT_NAME, $afterEvent]
             );
 
-        $this->manager->save($data, $scopeIdentifier);
+        $this->manager->save($data);
     }
 
-    /**
-     * @dataProvider scopeIdentifierDataProvider
-     *
-     * @param int|null|object $scopeIdentifier
-     */
-    public function testCalculateChangeSet($scopeIdentifier)
+    public function testCalculateChangeSet()
     {
         $data = [];
         $this->userScopeManager->expects($this->once())
             ->method('calculateChangeSet')
-            ->with($data, $scopeIdentifier);
+            ->with($data);
 
-        $this->manager->calculateChangeSet($data, $scopeIdentifier);
+        $this->manager->calculateChangeSet($data);
     }
 
     public function testReload()
@@ -353,48 +323,38 @@ class ConfigManagerTest extends \PHPUnit_Framework_TestCase
         ];
     }
 
-    /**
-     * @dataProvider scopeIdentifierDataProvider
-     *
-     * @param int|null|object $scopeIdentifier
-     */
-    public function testGet($scopeIdentifier)
+    public function testGet()
     {
         $parameterName = 'oro_test.someValue';
 
         $this->userScopeManager->expects($this->once())
             ->method('getSettingValue')
-            ->with($parameterName, false, $scopeIdentifier)
+            ->with($parameterName, false)
             ->willReturn(2);
 
         $this->globalScopeManager->expects($this->never())
             ->method('getSettingValue');
 
-        $this->assertEquals(2, $this->manager->get($parameterName, false, false, $scopeIdentifier));
+        $this->assertEquals(2, $this->manager->get($parameterName));
     }
 
-    /**
-     * @dataProvider scopeIdentifierDataProvider
-     *
-     * @param int|null|object $scopeIdentifier
-     */
-    public function testGetDefaultSettings($scopeIdentifier)
+    public function testGetDefaultSettings()
     {
         $parameterName = 'oro_test.anysetting';
 
         $this->userScopeManager->expects($this->once())
             ->method('getSettingValue')
-            ->with($parameterName, false, $scopeIdentifier)
+            ->with($parameterName, false)
             ->willReturn(null);
 
         $this->globalScopeManager->expects($this->once())
             ->method('getSettingValue')
-            ->with($parameterName, false, $scopeIdentifier)
+            ->with($parameterName, false)
             ->willReturn(null);
 
         $this->assertEquals(
             'anyvalue',
-            $this->manager->get($parameterName, false, false, $scopeIdentifier)
+            $this->manager->get($parameterName)
         );
     }
 
@@ -434,23 +394,18 @@ class ConfigManagerTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    /**
-     * @dataProvider scopeIdentifierDataProvider
-     *
-     * @param int|null|object $scopeIdentifier
-     */
-    public function testGetMergedWithParentValue($scopeIdentifier)
+    public function testGetMergedWithParentValue()
     {
         $parameterName = 'oro_test.anysetting';
 
         $this->globalScopeManager->expects($this->once())
             ->method('getSettingValue')
-            ->with($parameterName, false, $scopeIdentifier)
+            ->with($parameterName, false)
             ->willReturn(['a' => 1, 'b' => 1, 'c' => 1]);
 
         $this->userScopeManager->expects($this->once())
             ->method('getSettingValue')
-            ->with($parameterName, false, $scopeIdentifier)
+            ->with($parameterName, false)
             ->willReturn(['a' => null, 'b' => 2]);
 
         $this->assertEquals(
@@ -459,56 +414,7 @@ class ConfigManagerTest extends \PHPUnit_Framework_TestCase
                 'b' => 2,
                 'c' => 1,
             ],
-            $this->manager->getMergedWithParentValue([], $parameterName, false, $scopeIdentifier)
+            $this->manager->getMergedWithParentValue([], $parameterName)
         );
-    }
-
-    public function testGetValues()
-    {
-        $parameterName = 'oro_test.someValue';
-        $entity1 = new \stdClass();
-        $entity1->id = 1;
-        $entity2 = new \stdClass();
-        $entity2->id = 2;
-        $entities = [$entity1, $entity2];
-
-        $this->userScopeManager->expects($this->any())
-            ->method('resolveIdentifier')
-            ->willReturnMap(
-                [
-                    [$entity1, 33],
-                    [$entity2, 55]
-                ]
-            );
-
-        $this->userScopeManager->expects($this->exactly(2))
-            ->method('getSettingValue')
-            ->withConsecutive(
-                [$parameterName, false, $entity1],
-                [$parameterName, false, $entity2]
-            )
-            ->willReturnMap(
-                [
-                    [$parameterName, false, $entity1, 'val1'],
-                    [$parameterName, false, $entity2, 'val2']
-                ]
-            );
-
-        $this->globalScopeManager->expects($this->never())
-            ->method('getSettingValue');
-
-        $this->assertEquals([33 => 'val1', 55 => 'val2'], $this->manager->getValues($parameterName, $entities));
-    }
-
-    /**
-     * @return array
-     */
-    public function scopeIdentifierDataProvider()
-    {
-        return [
-            [null, 1],
-            [2, 2],
-            [new \stdClass(), 123]
-        ];
     }
 }

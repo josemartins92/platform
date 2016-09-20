@@ -42,8 +42,9 @@ class RestrictionManager
     public function boardViewEnabled(DatagridConfiguration $config)
     {
         $entityName = $this->gridConfigurationHelper->getEntity($config);
+        $enabled = $this->userAgentProvider->getUserAgent()->isDesktop() &&
+            (!$entityName || !$this->workflowRegistry->hasActiveWorkflowByEntityClass($entityName));
 
-        return $this->userAgentProvider->getUserAgent()->isDesktop() &&
-            (!$entityName || $this->workflowRegistry->getActiveWorkflowsByEntityClass($entityName)->isEmpty());
+        return $enabled;
     }
 }

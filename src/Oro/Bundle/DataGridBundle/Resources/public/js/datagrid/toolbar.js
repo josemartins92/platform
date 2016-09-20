@@ -6,7 +6,7 @@ define([
     './visible-items-counter',
     './page-size',
     './actions-panel',
-    './sorting/dropdown'
+    './sorting/select'
 ], function(_, Backbone, __, PaginationInput, VisibleItemsCounter, PageSize, ActionsPanel, SortingDropdown) {
     'use strict';
 
@@ -50,10 +50,6 @@ define([
             actionsPanel: '[data-grid-actions-panel]',
             extraActionsPanel: '[data-grid-extra-actions-panel]',
             sortingDropdown: '[data-grid-sorting]'
-        },
-
-        themeOptions: {
-            optionPrefix: 'toolbar'
         },
 
         /**
@@ -102,11 +98,7 @@ define([
                 this.hide();
             }
 
-            if (_.isFunction(options.template)) {
-                this.template = options.template;
-            } else {
-                this.template = _.template($(options.template || this.template).html());
-            }
+            this.template = _.template($(options.template || this.template).html());
 
             Toolbar.__super__.initialize.call(this, options);
         },
@@ -166,7 +158,7 @@ define([
             this.subviews.itemsCounter.$el.hide();
 
             if (this.subviews.sortingDropdown) {
-                this.$(this.selector.sortingDropdown).append(this.subviews.sortingDropdown.render().$el);
+                this.$(this.selector.sortingDropdown).hide().append(this.subviews.sortingDropdown.render().$el);
             }
 
             if (this.subviews.extraActionsPanel.haveActions()) {
