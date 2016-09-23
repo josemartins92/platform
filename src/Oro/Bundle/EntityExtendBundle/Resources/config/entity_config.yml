@@ -219,7 +219,7 @@ oro_entity_config:
                             min:            1
                             max:            255
                     form:
-                        type:               oro_entity_extend_text
+                        type:               hidden
                         options:
                             required:       false
                             label:          oro.entity_extend.entity_config.extend.field.items.length
@@ -242,7 +242,7 @@ oro_entity_config:
                         - Range:
                             min:            0
                     form:
-                        type:               oro_entity_extend_text
+                        type:               hidden
                         options:
                             required:       false
                             label:          oro.entity_extend.entity_config.extend.field.items.precision
@@ -265,7 +265,7 @@ oro_entity_config:
                         - Range:
                             min:            0
                     form:
-                        type:               oro_entity_extend_text
+                        type:               hidden
                         options:
                             required:       false
                             label:          oro.entity_extend.entity_config.extend.field.items.scale
