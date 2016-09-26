@@ -168,7 +168,8 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
-     *              "order"=20
+     *              "order"=20,
+     *              "excluded"=true
      *          }
      *      }
      * )
