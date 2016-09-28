@@ -155,6 +155,7 @@ oro_system_configuration:
                                         priority: 100
                                         children:
                                             - oro_locale.locale
+                                            - oro_locale.language
                                             - oro_locale.country
                                             - oro_locale.format_address_by_address_country
                                             - oro_locale.timezone

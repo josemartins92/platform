@@ -1,6 +1,6 @@
 <?php
 
-namespace Oro\Bundle\WorkflowBundle\Migrations\Schema\v1_14;
+namespace Oro\Bundle\WorkflowBundle\Migrations\Schema\v1_14_1;
 
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Types\StringType;
