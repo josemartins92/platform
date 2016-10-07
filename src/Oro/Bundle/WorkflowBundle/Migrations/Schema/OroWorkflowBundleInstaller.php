@@ -18,7 +18,7 @@ class OroWorkflowBundleInstaller implements Installation
      */
     public function getMigrationVersion()
     {
-        return 'v1_14_1';
+        return 'v1_14';
     }
 
     /**
