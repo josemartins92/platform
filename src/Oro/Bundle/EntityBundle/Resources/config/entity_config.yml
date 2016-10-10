@@ -114,7 +114,7 @@ oro_entity_config:
                         - Length:
                             max:            500
                     form:
-                        type:               textarea
+                        type:               hidden
                         options:
                             label:          oro.entity.entity_config.entity.field.items.description
                             tooltip:        oro.entity.entity_config.entity.field.items.description.tooltip
@@ -223,20 +223,20 @@ oro_entity_config:
                             empty_value:    false
                             block:          other
                             label:          oro.entity.entity_config.view.field.items.is_displayable
-                priority:
-                    options:
-                        value_type:         integer
-                        required_property:
-                            config_id:
-                                scope:      extend
-                            code:           owner
-                            value:          Custom
-                    form:
-                        type:               integer
-                        options:
-                            block:          other
-                            label:          oro.entity.entity_config.view.field.items.priority
-                            required:       false
+#                priority:
+#                    options:
+#                        value_type:         integer
+#                        required_property:
+#                            config_id:
+#                                scope:      extend
+#                            code:           owner
+#                            value:          Custom
+#                    form:
+#                        type:               hidden
+#                        options:
+#                            block:          other
+#                            label:          oro.entity.entity_config.view.field.items.priority
+#                            required:       false
 
     grouping:
         entity:
