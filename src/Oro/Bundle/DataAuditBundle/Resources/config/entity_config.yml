@@ -35,7 +35,7 @@ oro_entity_config:
                     options:
                         value_type:         boolean
                         priority:           60
-                        default_value:      1
+                        default_value:      false
                         allowed_type:       [string, text, integer, smallint, bigint, boolean, datetime, date, time, float, decimal, money, percent, enum, multiEnum, manyToOne, manyToMany, array, simple_array, json_array, ref-many, ref-one]
                     grid:
                         type:               boolean
@@ -46,7 +46,7 @@ oro_entity_config:
                         type:               oro_entity_config_choice
                         options:
                             choices:        [oro.entity.entity_config.options.no, oro.entity.entity_config.options.yes]
-                            empty_value:    false
+                            empty_value:    true
                             block:          other
                             label:          oro.dataaudit.entity_config.field.items.auditable
 
