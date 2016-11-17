@@ -24,9 +24,7 @@ class DecimalValidator extends ConstraintValidator
         $intPart      = (int)(floor(abs($value)));
         $fractionPart = abs($value) - $intPart;
 
-        if (($intPart > 0 && strlen((string)$intPart) > ($constraint->precision - $constraint->scale))
-            || ($fractionPart > 0 && strlen(substr(strrchr((string)$fractionPart, '.'), 1)) > $constraint->scale)
-        ) {
+        if (($intPart > 0 && strlen((string)$intPart) > ($constraint->precision - $constraint->scale))) {
             $this->context->addViolation(
                 $constraint->message,
                 [
