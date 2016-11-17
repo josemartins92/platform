@@ -21,15 +21,16 @@ class DecimalValidator extends ConstraintValidator
             throw new UnexpectedTypeException($value, 'numeric');
         }
 
-        $intPart      = (int)(floor(abs($value)));
+        $intPart = (int)(floor(abs($value)));
         $fractionPart = abs($value) - $intPart;
-
-        if (($intPart > 0 && strlen((string)$intPart) > ($constraint->precision - $constraint->scale))) {
+        if (($intPart > 0 && strlen((string)$intPart) > ($constraint->precision - $constraint->scale))
+            || ($fractionPart > 0 && strlen(substr(strrchr((string)$value, '.'), 1)) > $constraint->scale)
+        ) {
             $this->context->addViolation(
                 $constraint->message,
                 [
                     '{{ precision }}' => $constraint->precision,
-                    '{{ scale }}'     => $constraint->scale
+                    '{{ scale }}' => $constraint->scale
                 ]
             );
         }
