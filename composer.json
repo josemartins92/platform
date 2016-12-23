@@ -69,8 +69,6 @@
         "hwi/oauth-bundle": "0.5.*",
         "components/jquery": "3.1.*",
         "piwik/device-detector": "3.7.*",
-        "bower-asset/jsplumb": "1.7.*",
-        "bower-asset/moment-timezone": "0.5.*",
         "vakata/jstree": "3.3.*",
         "symfony/polyfill-php70":"1.*",
         "liuggio/excelbundle": "2.1.*",
