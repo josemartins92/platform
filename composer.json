@@ -9,6 +9,12 @@
             "homepage": "http://www.orocrm.com"
         }
     ],
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://packagist.orocrm.com"
+        }
+    ],
     "require": {
         "php": ">=5.6",
         "ext-intl": "*",
@@ -62,8 +68,6 @@
         "ezyang/htmlpurifier": "4.8.0",
         "hwi/oauth-bundle": "0.5.*",
         "components/jquery": "3.1.*",
-        "bower-asset/backbone": "1.2.3",
-        "bower-asset/underscore": "1.8.3",
         "piwik/device-detector": "3.7.*",
         "bower-asset/jsplumb": "1.7.*",
         "bower-asset/moment-timezone": "0.5.*",
