@@ -11,6 +11,7 @@ use Oro\Bundle\DataGridBundle\Datasource\ResultRecord;
 use Oro\Bundle\DataGridBundle\Event\BuildAfter;
 use Oro\Bundle\DataGridBundle\Event\BuildBefore;
 use Oro\Bundle\DataGridBundle\Event\OrmResultAfter;
+use Oro\Bundle\DataGridBundle\EventListener\AbstractDatagridListener;
 
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
@@ -21,19 +22,14 @@ use Oro\Bundle\WorkflowBundle\Form\Type\WorkflowStepSelectType;
 use Oro\Bundle\WorkflowBundle\Helper\WorkflowQueryTrait;
 use Oro\Bundle\WorkflowBundle\Model\WorkflowRegistry;
 
-class WorkflowStepColumnListener
+class WorkflowStepColumnListener extends AbstractDatagridListener
 {
     use WorkflowQueryTrait;
 
     const WORKFLOW_STEP_COLUMN = 'workflowStepLabel';
 
-    const WORKFLOW_FILTER = 'workflowStepLableByWorkflow';
-    const WORKFLOW_STEP_FILTER = 'workflowStepLableByWorkflowStep';
-
-    /**
-     * @var DoctrineHelper
-     */
-    protected $doctrineHelper;
+    const WORKFLOW_FILTER = 'workflowStepLabelByWorkflow';
+    const WORKFLOW_STEP_FILTER = 'workflowStepLabelByWorkflowStep';
 
     /**
      * @var ConfigProvider
@@ -65,7 +61,7 @@ class WorkflowStepColumnListener
         ConfigProvider $configProvider,
         WorkflowRegistry $workflowRegistry
     ) {
-        $this->doctrineHelper = $doctrineHelper;
+        parent::__construct($doctrineHelper);
         $this->configProvider = $configProvider;
         $this->workflowRegistry = $workflowRegistry;
     }
@@ -86,6 +82,11 @@ class WorkflowStepColumnListener
     public function onBuildBefore(BuildBefore $event)
     {
         $config = $event->getConfig();
+
+        // datasource type other than ORM is not supported yet
+        if ($config->getDatasourceType() !== OrmDatasource::TYPE) {
+            return;
+        }
 
         // get root entity
         list($rootEntity, $rootEntityAlias) = $this->getRootEntityNameAndAlias($config);
@@ -171,15 +172,6 @@ class WorkflowStepColumnListener
 
             $record->addData([self::WORKFLOW_STEP_COLUMN => $items]);
         }
-    }
-
-    /**
-     * @param string $entity
-     * @return string
-     */
-    protected function updateEntityClass($entity)
-    {
-        return $this->doctrineHelper->getEntityManager($entity)->getClassMetadata($entity)->getName();
     }
 
     /**
@@ -290,27 +282,6 @@ class WorkflowStepColumnListener
             }
             $config->offsetSetByPath($path, $columns);
         }
-    }
-
-    /**
-     * @param DatagridConfiguration $config
-     * @return array
-     */
-    protected function getRootEntityNameAndAlias(DatagridConfiguration $config)
-    {
-        $rootEntity = null;
-        $rootEntityAlias = null;
-
-        $from = $config->offsetGetByPath('[source][query][from]');
-        if ($from) {
-            $firstFrom = current($from);
-            if (!empty($firstFrom['table']) && !empty($firstFrom['alias'])) {
-                $rootEntity = $this->updateEntityClass($firstFrom['table']);
-                $rootEntityAlias = $firstFrom['alias'];
-            }
-        }
-
-        return [$rootEntity, $rootEntityAlias];
     }
 
     /**

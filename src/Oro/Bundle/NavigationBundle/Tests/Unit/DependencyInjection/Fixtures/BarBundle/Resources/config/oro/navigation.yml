@@ -1,0 +1,20 @@
+navigation:
+    menu_config:
+        tree:
+            application_menu:
+                type: application_menu
+                scope_type: default
+
+            shortcuts:
+                type: shortcuts
+                scope_type: custom
+
+    navigation_elements:
+        favoriteButton:
+            default: true
+            routes:
+                call_list: false
+        shortcutsPanel:
+            default: false
+            routes:
+                call_list: true

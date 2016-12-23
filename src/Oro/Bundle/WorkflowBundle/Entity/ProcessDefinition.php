@@ -18,7 +18,7 @@ use Symfony\Component\Security\Acl\Model\DomainObjectInterface;
  *      routeView="oro_process_definition_view",
  *      defaultValues={
  *          "entity"={
- *              "icon"="icon-inbox"
+ *              "icon"="fa-inbox"
  *          },
  *          "security"={
  *              "type"="ACL",
@@ -80,7 +80,7 @@ class ProcessDefinition implements DomainObjectInterface
      *
      * @ORM\Column(name="exclude_definitions", type="simple_array", nullable=true)
      */
-    protected $excludeDefinitions;
+    protected $excludeDefinitions = [];
 
     /**
      * @var array

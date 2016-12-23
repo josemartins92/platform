@@ -10,14 +10,14 @@ use Knp\Menu\ItemInterface;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Oro\Component\DependencyInjection\ServiceLink;
 
 class AclAwareMenuFactoryExtension implements Factory\ExtensionInterface
 {
     /**#@+
      * ACL Aware MenuFactory constants
      */
-    const ACL_RESOURCE_ID_KEY = 'aclResourceId';
+    const ACL_RESOURCE_ID_KEY = 'acl_resource_id';
     const ROUTE_CONTROLLER_KEY = '_controller';
     const CONTROLLER_ACTION_DELIMITER = '::';
     const DEFAULT_ACL_POLICY = true;
@@ -30,9 +30,9 @@ class AclAwareMenuFactoryExtension implements Factory\ExtensionInterface
     private $router;
 
     /**
-     * @var SecurityFacade
+     * @var ServiceLink
      */
-    private $securityFacade;
+    private $securityFacadeLink;
 
     /**
      * @var \Doctrine\Common\Cache\CacheProvider
@@ -51,12 +51,12 @@ class AclAwareMenuFactoryExtension implements Factory\ExtensionInterface
 
     /**
      * @param RouterInterface $router
-     * @param SecurityFacade $securityFacade
+     * @param ServiceLink     $securityFacadeLink
      */
-    public function __construct(RouterInterface $router, SecurityFacade $securityFacade)
+    public function __construct(RouterInterface $router, ServiceLink $securityFacadeLink)
     {
         $this->router = $router;
-        $this->securityFacade = $securityFacade;
+        $this->securityFacadeLink = $securityFacadeLink;
     }
 
     /**
@@ -85,7 +85,6 @@ class AclAwareMenuFactoryExtension implements Factory\ExtensionInterface
      */
     public function buildItem(ItemInterface $item, array $options)
     {
-
     }
 
     /**
@@ -118,18 +117,19 @@ class AclAwareMenuFactoryExtension implements Factory\ExtensionInterface
     {
         $isAllowed                      = self::DEFAULT_ACL_POLICY;
         $options['extras']['isAllowed'] = self::DEFAULT_ACL_POLICY;
+        $securityFacade = $this->securityFacadeLink->getService();
 
         if (isset($options['check_access']) && $options['check_access'] === false) {
             return;
         }
 
-        if ($this->hideAllForNotLoggedInUsers && !$this->securityFacade->hasLoggedUser()) {
-            if (!empty($options['extras']['showNonAuthorized'])) {
+        if ($this->hideAllForNotLoggedInUsers && !$securityFacade->hasLoggedUser()) {
+            if (!empty($options['extras']['show_non_authorized'])) {
                 return;
             }
 
             $isAllowed = false;
-        } elseif ($this->securityFacade->getToken() !== null) { // don't check access if it's CLI
+        } elseif ($securityFacade->getToken() !== null) { // don't check access if it's CLI
             if (array_key_exists(self::ACL_POLICY_KEY, $options['extras'])) {
                 $isAllowed = $options['extras'][self::ACL_POLICY_KEY];
             }
@@ -138,7 +138,7 @@ class AclAwareMenuFactoryExtension implements Factory\ExtensionInterface
                 if (array_key_exists($options[self::ACL_RESOURCE_ID_KEY], $this->aclCache)) {
                     $isAllowed = $this->aclCache[$options[self::ACL_RESOURCE_ID_KEY]];
                 } else {
-                    $isAllowed = $this->securityFacade->isGranted($options[self::ACL_RESOURCE_ID_KEY]);
+                    $isAllowed = $securityFacade->isGranted($options[self::ACL_RESOURCE_ID_KEY]);
                     $this->aclCache[$options[self::ACL_RESOURCE_ID_KEY]] = $isAllowed;
                 }
             } else {
@@ -147,7 +147,7 @@ class AclAwareMenuFactoryExtension implements Factory\ExtensionInterface
                     if (array_key_exists($routeInfo['key'], $this->aclCache)) {
                         $isAllowed = $this->aclCache[$routeInfo['key']];
                     } else {
-                        $isAllowed = $this->securityFacade->isClassMethodGranted(
+                        $isAllowed = $securityFacade->isClassMethodGranted(
                             $routeInfo['controller'],
                             $routeInfo['action']
                         );

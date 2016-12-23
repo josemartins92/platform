@@ -1,6 +1,7 @@
-oro_api:
+api:
     entities:
         Oro\Bundle\ConfigBundle\Api\Model\ConfigurationSection:
+            disable_meta_properties: true
             identifier_field_names: [id]
             fields:
                 id:
@@ -28,6 +29,7 @@ oro_api:
                 get_relationship: false
 
         Oro\Bundle\ConfigBundle\Api\Model\ConfigurationOption:
+            disable_meta_properties: true
             identifier_field_names: [key]
             fields:
                 key:
@@ -48,10 +50,5 @@ oro_api:
                 updatedAt:
                     description: Updated At
                     data_type: datetime
-            actions:
-                get: false
-                get_list: false
-                update: false
-                create: false
-                delete: false
-                delete_list: false
+            # this entity does not have own Data API resource
+            actions: false

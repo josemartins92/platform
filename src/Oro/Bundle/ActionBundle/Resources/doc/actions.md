@@ -4,8 +4,8 @@ Actions
 Table of Contents
 -----------------
  - [Run Action Group](#run-action-group-run_action_group)
- - [Format Name](#format-name-format_name)
- - [Create Date](#create-date-create_date)
+ - [Format Name](#format-name)
+ - [Create Date](#create-date)
 
 Run Action Group `@run_action_group`
 ------------------------------------
@@ -14,7 +14,7 @@ Run Action Group `@run_action_group`
 
 **Alias:** run_action_group
 
-**Description:** Runs named (action group)[./action-groups.md] with passed parameters.
+**Description:** Runs named [action group](./action-groups.md) with passed parameters.
 
 **Options:**
  - result - (optional) property path where where to put action group execution context value
@@ -42,7 +42,7 @@ Run Action Group `@run_action_group`
  
  Please note, that all parameters must pass validation and will be accessible under root node of ActionData in
 action_group execution body. 
- E.g. `$.entity_class` and `$.entity_id` respectively to their names. See (Action Groups)[./action-groups.md]
+ E.g. `$.entity_class` and `$.entity_id` respectively to their names. See [Action Groups](./action-groups.md)
 documentation for more details.
 
 Format Name
@@ -93,4 +93,18 @@ Create Date
     parameters:
         attribute: $sales_funnel_start_date
         date: '2014-04-01' # must use quotes because date parameter requires string value
+```
+
+
+Copy Values
+-----------
+
+**Class:** Oro\Component\Action\Action\CopyValues
+
+**Alias:** copy_values
+
+**Description:**  Provide copy of values from context or object to provided attribute. Behave same as PHP `array_merge` function.
+
+```
+- @copy_values: [$.to, $.from1, $.from2, {key: 'value'}]
 ```

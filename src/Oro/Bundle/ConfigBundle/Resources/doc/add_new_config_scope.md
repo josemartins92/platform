@@ -58,7 +58,7 @@ To be able to change values for new scope, developer should add new tree structu
 
 ```yml
 
-    oro_system_configuration:
+    system_configuration:
        tree:
           test_configuration:
               platform:
@@ -156,7 +156,7 @@ add new action to manipulate data:
 
                 // outdate content tags, it's only special case for generation that are not covered by NavigationBundle
                 $taggableData = ['name' => 'organization_configuration', 'params' => [$activeGroup, $activeSubGroup]];
-                $sender       = $this->get('oro_navigation.content.topic_sender');
+                $sender       = $this->get('oro_sync.content.topic_sender');
 
                 $sender->send($sender->getGenerator()->generate($taggableData));
             }

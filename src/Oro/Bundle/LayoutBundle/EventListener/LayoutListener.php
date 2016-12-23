@@ -2,7 +2,9 @@
 
 namespace Oro\Bundle\LayoutBundle\EventListener;
 
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\GetResponseForControllerResultEvent;
 
 use Oro\Component\Layout\Layout;
@@ -12,7 +14,6 @@ use Oro\Component\Layout\ContextInterface;
 use Oro\Component\Layout\Exception\LogicException;
 
 use Oro\Bundle\LayoutBundle\Request\LayoutHelper;
-use Oro\Bundle\LayoutBundle\DataCollector\LayoutDataCollector;
 use Oro\Bundle\LayoutBundle\Annotation\Layout as LayoutAnnotation;
 use Oro\Bundle\LayoutBundle\Layout\LayoutContextHolder;
 
@@ -37,26 +38,18 @@ class LayoutListener
     protected $layoutContextHolder;
 
     /**
-     * @var LayoutDataCollector
-     */
-    protected $layoutDataCollector;
-
-    /**
      * @param LayoutHelper $layoutHelper
      * @param LayoutManager $layoutManager
      * @param LayoutContextHolder $layoutContextHolder
-     * @param LayoutDataCollector $layoutDataCollector
      */
     public function __construct(
         LayoutHelper $layoutHelper,
         LayoutManager $layoutManager,
-        LayoutContextHolder $layoutContextHolder,
-        LayoutDataCollector $layoutDataCollector
+        LayoutContextHolder $layoutContextHolder
     ) {
         $this->layoutHelper = $layoutHelper;
         $this->layoutManager = $layoutManager;
         $this->layoutContextHolder = $layoutContextHolder;
-        $this->layoutDataCollector = $layoutDataCollector;
     }
 
     /**
@@ -81,21 +74,16 @@ class LayoutListener
             );
         }
 
+        $layout = null;
+        $context = null;
         $parameters = $event->getControllerResult();
         if (is_array($parameters)) {
             $context = new LayoutContext();
             foreach ($parameters as $key => $value) {
                 $context->set($key, $value);
             }
-            $this->configureContext($context, $layoutAnnotation);
-            $layout = $this->getLayout($context, $layoutAnnotation);
-            $this->layoutDataCollector->collectContextItems($context);
-            $this->layoutContextHolder->setContext($context);
         } elseif ($parameters instanceof ContextInterface) {
-            $this->configureContext($parameters, $layoutAnnotation);
-            $layout = $this->getLayout($parameters, $layoutAnnotation);
-            $this->layoutDataCollector->collectContextItems($parameters);
-            $this->layoutContextHolder->setContext($parameters);
+            $context = $parameters;
         } elseif ($parameters instanceof Layout) {
             if (!$layoutAnnotation->isEmpty()) {
                 throw new LogicException(
@@ -107,11 +95,15 @@ class LayoutListener
         } else {
             return;
         }
-        
-        $this->layoutDataCollector->collectViews($layout->getView());
 
-        $response = new Response();
-        $response->setContent($layout->render());
+        if ($layout) {
+            $response = new Response($layout->render());
+        } else {
+            $this->configureContext($context, $layoutAnnotation);
+            $this->layoutContextHolder->setContext($context);
+            $response = $this->getLayoutResponse($context, $layoutAnnotation, $request);
+        }
+
         $event->setResponse($response);
     }
 
@@ -120,10 +112,11 @@ class LayoutListener
      *
      * @param ContextInterface $context
      * @param LayoutAnnotation $layoutAnnotation
+     * @param string|null $rootId
      *
      * @return Layout
      */
-    protected function getLayout(ContextInterface $context, LayoutAnnotation $layoutAnnotation)
+    protected function getLayout(ContextInterface $context, LayoutAnnotation $layoutAnnotation, $rootId = null)
     {
         $layoutBuilder = $this->layoutManager->getLayoutBuilder();
         // TODO discuss adding root automatically
@@ -134,7 +127,7 @@ class LayoutListener
             $layoutBuilder->setBlockTheme($blockThemes);
         }
 
-        return $layoutBuilder->getLayout($context);
+        return $layoutBuilder->getLayout($context, $rootId);
     }
 
     /**
@@ -152,6 +145,7 @@ class LayoutListener
                 $context->set('action', $action);
             }
         }
+
         $theme = $layoutAnnotation->getTheme();
         if (!empty($theme)) {
             $currentTheme = $context->getOr('theme');
@@ -164,5 +158,33 @@ class LayoutListener
         if (!empty($vars)) {
             $context->getResolver()->setRequired($vars);
         }
+    }
+
+    /**
+     * @param ContextInterface $context
+     * @param LayoutAnnotation $layoutAnnotation
+     * @param Request $request
+     * @return Response
+     */
+    protected function getLayoutResponse(
+        ContextInterface $context,
+        LayoutAnnotation $layoutAnnotation,
+        Request $request
+    ) {
+        $blockIds = $request->get('layout_block_ids');
+        if (is_array($blockIds) && $blockIds) {
+            $response = [];
+            foreach ($blockIds as $blockId) {
+                if ($blockId) {
+                    $layout = $this->getLayout($context, $layoutAnnotation, $blockId);
+                    $response[$blockId] = $layout->render();
+                }
+            }
+            $response = new JsonResponse($response);
+        } else {
+            $layout = $this->getLayout($context, $layoutAnnotation);
+            $response = new Response($layout->render());
+        }
+        return $response;
     }
 }

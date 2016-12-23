@@ -9,7 +9,7 @@ skipped:                  Skipped
 form:
     configuration:
         database:
-            header:       MySQL database connection
+            header:       Database connection
             driver:       Driver
             host:         Host
             port:         Port
@@ -20,6 +20,7 @@ form:
             drop_none:    None
             drop_app:     Application Tables
             drop_full:    All Tables
+            mysql_hint:   To support supplemental characters (e.g. emojis), recommended character set for MySQL is utf8mb4
         mailer:
             header:       Mailer settings
             host:         Host
@@ -77,6 +78,7 @@ process:
             fixtures:      Load fixtures
             permissions:   Load permissions configuration
             workflows:     Load workflow definitions
+            crons:         Load cron definitions
             processes:     Load processes configuration
         setup:
             header:        Administration setup
@@ -88,8 +90,8 @@ process:
             localization:  Dump localization
             assets:        Install assets
             assetic:       Dump assetic
+            translation-load: Load translations
             translation:   Prepare translations
-            message-queue: Prepare message queue
             requirejs:     Optimize JS resources (optional)
             finish:        Clear cache to finalize installation
         final:

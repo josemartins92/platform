@@ -72,7 +72,8 @@ define([
                 // @TODO: move to descendant
                 if (attrsToCompare.relatedActivityClass === 'Oro\\Bundle\\EmailBundle\\Entity\\Email') {
                     // if tread is same
-                    if (attrsToCompare.data.treadId === this.get('data').treadId) {
+                    if (attrsToCompare.data.treadId !== null &&
+                        attrsToCompare.data.treadId === this.get('data').treadId) {
                         return true;
                     }
                     // if compared model is not in tread and if tread was just created (it contains replayedEmailId)
@@ -100,17 +101,19 @@ define([
 
             this.set('isContentLoading', true);
             return $.ajax(options)
-                .always(_.bind(function() {
-                    this.set('isContentLoading', false);
-                }, this))
                 .done(_.bind(function(data) {
-                    this.set('is_loaded', true);
-                    this.set('contentHTML', data);
+                    this.set({
+                        is_loaded: true,
+                        contentHTML: data,
+                        isContentLoading: false
+                    });
                 }, this))
                 .fail(_.bind(function(response) {
+                    var attrs = {isContentLoading: false};
                     if (response.status === 403) {
-                        this.set('is_loaded', true);
+                        attrs.is_loaded = true;
                     }
+                    this.set(attrs);
                 }, this));
         }
     });

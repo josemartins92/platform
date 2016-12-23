@@ -2,13 +2,8 @@
 
 namespace Oro\Bundle\TestFrameworkBundle\Test;
 
-use Doctrine\Common\DataFixtures\DependentFixtureInterface;
-use Doctrine\Common\DataFixtures\Executor\ORMExecutor;
-use Doctrine\Common\DataFixtures\Purger\ORMPurger;
 use Doctrine\Common\DataFixtures\ReferenceRepository;
-use Doctrine\ORM\EntityManager;
 
-use Symfony\Bridge\Doctrine\DataFixtures\ContainerAwareLoader as DataFixturesLoader;
 use Symfony\Component\Console\Output\StreamOutput;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Yaml\Yaml;
@@ -20,7 +15,12 @@ use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase as BaseWebTestCase;
 
 use Oro\Bundle\NavigationBundle\Event\ResponseHashnavListener;
+use Oro\Bundle\TestFrameworkBundle\Test\DataFixtures\AliceFixtureFactory;
+use Oro\Bundle\TestFrameworkBundle\Test\DataFixtures\AliceFixtureIdentifierResolver;
+use Oro\Bundle\TestFrameworkBundle\Test\DataFixtures\DataFixturesExecutor;
+use Oro\Bundle\TestFrameworkBundle\Test\DataFixtures\DataFixturesLoader;
 use Oro\Component\Testing\DbIsolationExtension;
+use Oro\Component\PhpUtils\ArrayUtil;
 
 /**
  * Abstract class for functional and integration tests
@@ -30,7 +30,7 @@ use Oro\Component\Testing\DbIsolationExtension;
 abstract class WebTestCase extends BaseWebTestCase
 {
     use DbIsolationExtension;
-    
+
     /** Annotation names */
     const DB_ISOLATION_ANNOTATION = 'dbIsolation';
     const DB_ISOLATION_PER_TEST_ANNOTATION = 'dbIsolationPerTest';
@@ -96,14 +96,18 @@ abstract class WebTestCase extends BaseWebTestCase
             $this->rollbackTransaction();
             self::$loadedFixtures = [];
         }
-        
-        $refClass = new \ReflectionClass($this);
-        foreach ($refClass->getProperties() as $prop) {
-            if (!$prop->isStatic() && 0 !== strpos($prop->getDeclaringClass()->getName(), 'PHPUnit_')) {
-                $prop->setAccessible(true);
-                $prop->setValue($this, null);
-            }
-        }
+    }
+
+    public static function setUpBeforeClass()
+    {
+        /**
+         * In case we have isolated test we should have clean env before run it,
+         * so we will not have next problem:
+         * - Data provider in phpunit called before tests (even before this method) and can start a client
+         *   for not isolated tests (ex. GetRestJsonApiTest),
+         *   so we will have client without transaction started in our test
+         */
+        self::$clientInstance = null;
     }
 
     public static function tearDownAfterClass()
@@ -149,7 +153,7 @@ abstract class WebTestCase extends BaseWebTestCase
             if (self::getDbIsolationSetting() || self::getDbIsolationPerTestSetting()) {
                 //This is a workaround for MyISAM search tables that are not transactional
                 if (self::getDbReindexSetting()) {
-                    self::getContainer()->get('oro_search.search.engine')->reindex();
+                    self::getContainer()->get('oro_search.search.engine.indexer')->reindex();
                 }
 
                 $this->startTransaction();
@@ -159,6 +163,19 @@ abstract class WebTestCase extends BaseWebTestCase
         }
 
         $this->client = self::$clientInstance;
+    }
+
+    /**
+     * @param string $login
+     */
+    protected function loginUser($login)
+    {
+        if ('' !== $login) {
+            self::$clientInstance->setServerParameters(static::generateBasicAuthHeader($login, $login));
+        } else {
+            self::$clientInstance->setServerParameters([]);
+            $this->client->getCookieJar()->clear();
+        }
     }
 
     /**
@@ -351,54 +368,63 @@ abstract class WebTestCase extends BaseWebTestCase
     }
 
     /**
-     * @param array $classNames
-     * @param bool  $force
+     * @param string[] $fixtures Each fixture can be a class name or a path to nelmio/alice file
+     * @param bool     $force
+     *
+     * @link https://github.com/nelmio/alice
      */
-    protected function loadFixtures(array $classNames, $force = false)
+    protected function loadFixtures(array $fixtures, $force = false)
     {
-        if (!$force) {
-            $classNames = array_filter(
-                $classNames,
-                function ($value) {
-                    return !in_array($value, self::$loadedFixtures);
-                }
-            );
+        $container = $this->getContainer();
+        $fixtureIdentifierResolver = new AliceFixtureIdentifierResolver($container->get('kernel'));
 
-            if (!$classNames) {
+        $fixtures = array_map(
+            function ($value) use ($fixtureIdentifierResolver) {
+                return $fixtureIdentifierResolver->resolveId($value);
+            },
+            $fixtures
+        );
+        if (!$force) {
+            $fixtures = array_values(array_filter(
+                $fixtures,
+                function ($value) {
+                    return !in_array($value, self::$loadedFixtures, true);
+                }
+            ));
+            if (!$fixtures) {
                 return;
             }
         }
+        self::$loadedFixtures = array_merge(self::$loadedFixtures, $fixtures);
 
-        self::$loadedFixtures = array_merge(self::$loadedFixtures, $classNames);
+        $loader = new DataFixturesLoader(new AliceFixtureFactory(), $fixtureIdentifierResolver, $container);
+        foreach ($fixtures as $fixture) {
+            $loader->addFixture($fixture);
+        }
 
-        $loader = $this->getFixtureLoader($classNames);
-        $fixtures = array_values($loader->getFixtures());
-
-        /** @var EntityManager $em */
-        $em = $this->getContainer()->get('doctrine')->getManager();
-        $executor = new ORMExecutor($em, new ORMPurger($em));
-        $executor->execute($fixtures, true);
+        $executor = new DataFixturesExecutor($container->get('doctrine')->getManager());
+        $executor->execute($loader->getFixtures(), true);
         self::$referenceRepository = $executor->getReferenceRepository();
         $this->postFixtureLoad();
     }
 
     /**
-     * @param string $referenceUID
+     * @param string $name
      *
      * @return object|mixed
      */
-    protected function getReference($referenceUID)
+    protected function getReference($name)
     {
-        return $this->getReferenceRepository()->getReference($referenceUID);
+        return $this->getReferenceRepository()->getReference($name);
     }
 
     /**
-     * @param string $referenceUID
+     * @param string $name
      * @return bool
      */
-    protected function hasReference($referenceUID)
+    protected function hasReference($name)
     {
-        return $this->getReferenceRepository()->hasReference($referenceUID);
+        return $this->getReferenceRepository()->hasReference($name);
     }
 
     /**
@@ -418,49 +444,6 @@ abstract class WebTestCase extends BaseWebTestCase
      */
     protected function postFixtureLoad()
     {
-
-    }
-
-    /**
-     * Retrieve Doctrine DataFixtures loader.
-     *
-     * @param array $classNames
-     *
-     * @return DataFixturesLoader
-     */
-    private function getFixtureLoader(array $classNames)
-    {
-        $loader = new DataFixturesLoader($this->getContainer());
-
-        foreach ($classNames as $className) {
-            $this->loadFixtureClass($loader, $className);
-        }
-
-        return $loader;
-    }
-
-    /**
-     * Load a data fixture class.
-     *
-     * @param DataFixturesLoader $loader
-     * @param string             $className
-     */
-    private function loadFixtureClass(DataFixturesLoader $loader, $className)
-    {
-        $fixture = new $className();
-
-        if ($loader->hasFixture($fixture)) {
-            unset($fixture);
-            return;
-        }
-
-        $loader->addFixture($fixture);
-
-        if ($fixture instanceof DependentFixtureInterface) {
-            foreach ($fixture->getDependencies() as $dependency) {
-                $this->loadFixtureClass($loader, $dependency);
-            }
-        }
     }
 
     /**
@@ -512,6 +495,32 @@ abstract class WebTestCase extends BaseWebTestCase
         }
 
         return self::$clientInstance;
+    }
+
+    /**
+     * Add value from 'oro_default' route to the url
+     *
+     * @param array $data
+     * @param string $urlParameterKey
+     */
+    public function addOroDefaultPrefixToUrlInParameterArray(&$data, $urlParameterKey)
+    {
+        $oroDefaultPrefix = $this->getUrl('oro_default');
+        
+        $replaceOroDefaultPrefixCallback = function (&$value) use ($oroDefaultPrefix, $urlParameterKey) {
+            if (!is_null($value[$urlParameterKey])) {
+                $value[$urlParameterKey] = str_replace(
+                    '%oro_default_prefix%',
+                    $oroDefaultPrefix,
+                    $value[$urlParameterKey]
+                );
+            }
+        };
+
+        array_walk(
+            $data,
+            $replaceOroDefaultPrefixCallback
+        );
     }
 
     /**
@@ -672,26 +681,28 @@ abstract class WebTestCase extends BaseWebTestCase
     /**
      * Checks json response status code and return content as array
      *
-     * @param Response $response
-     * @param int      $statusCode
+     * @param Response   $response
+     * @param int        $statusCode
+     * @param string|int $message
      *
      * @return array
      */
-    public static function getJsonResponseContent(Response $response, $statusCode)
+    public static function getJsonResponseContent(Response $response, $statusCode, $message = null)
     {
-        self::assertJsonResponseStatusCodeEquals($response, $statusCode);
+        self::assertJsonResponseStatusCodeEquals($response, $statusCode, $message);
         return self::jsonToArray($response->getContent());
     }
 
     /**
      * Assert response is json and has status code
      *
-     * @param Response $response
-     * @param int      $statusCode
+     * @param Response    $response
+     * @param int         $statusCode
+     * @param string|null $message
      */
-    public static function assertEmptyResponseStatusCodeEquals(Response $response, $statusCode)
+    public static function assertEmptyResponseStatusCodeEquals(Response $response, $statusCode, $message = null)
     {
-        self::assertResponseStatusCodeEquals($response, $statusCode);
+        self::assertResponseStatusCodeEquals($response, $statusCode, $message);
         self::assertEmpty(
             $response->getContent(),
             sprintf('HTTP response with code %d must have empty body', $statusCode)
@@ -701,37 +712,40 @@ abstract class WebTestCase extends BaseWebTestCase
     /**
      * Assert response is json and has status code
      *
-     * @param Response $response
-     * @param int      $statusCode
+     * @param Response    $response
+     * @param int         $statusCode
+     * @param string|null $message
      */
-    public static function assertJsonResponseStatusCodeEquals(Response $response, $statusCode)
+    public static function assertJsonResponseStatusCodeEquals(Response $response, $statusCode, $message = null)
     {
-        self::assertResponseStatusCodeEquals($response, $statusCode);
-        self::assertResponseContentTypeEquals($response, 'application/json');
+        self::assertResponseStatusCodeEquals($response, $statusCode, $message);
+        self::assertResponseContentTypeEquals($response, 'application/json', $message);
     }
 
     /**
      * Assert response is html and has status code
      *
-     * @param Response $response
-     * @param int      $statusCode
+     * @param Response    $response
+     * @param int         $statusCode
+     * @param string|null $message
      */
-    public static function assertHtmlResponseStatusCodeEquals(Response $response, $statusCode)
+    public static function assertHtmlResponseStatusCodeEquals(Response $response, $statusCode, $message = null)
     {
-        self::assertResponseStatusCodeEquals($response, $statusCode);
-        self::assertResponseContentTypeEquals($response, 'text/html; charset=UTF-8');
+        self::assertResponseStatusCodeEquals($response, $statusCode, $message);
+        self::assertResponseContentTypeEquals($response, 'text/html; charset=UTF-8', $message);
     }
 
     /**
      * Assert response status code equals
      *
-     * @param Response $response
-     * @param int      $statusCode
+     * @param Response    $response
+     * @param int         $statusCode
+     * @param string|null $message
      */
-    public static function assertResponseStatusCodeEquals(Response $response, $statusCode)
+    public static function assertResponseStatusCodeEquals(Response $response, $statusCode, $message = null)
     {
         try {
-            \PHPUnit_Framework_TestCase::assertEquals($statusCode, $response->getStatusCode());
+            \PHPUnit_Framework_TestCase::assertEquals($statusCode, $response->getStatusCode(), $message);
         } catch (\PHPUnit_Framework_ExpectationFailedException $e) {
             if ($statusCode < 400
                 && $response->getStatusCode() >= 400
@@ -765,15 +779,17 @@ abstract class WebTestCase extends BaseWebTestCase
     /**
      * Assert response content type equals
      *
-     * @param Response $response
-     * @param string   $contentType
+     * @param Response    $response
+     * @param string      $contentType
+     * @param string|null $message
      */
-    public static function assertResponseContentTypeEquals(Response $response, $contentType)
+    public static function assertResponseContentTypeEquals(Response $response, $contentType, $message = null)
     {
-        \PHPUnit_Framework_TestCase::assertTrue(
-            $response->headers->contains('Content-Type', $contentType),
-            $response->headers
-        );
+        $message = $message ? $message . PHP_EOL : '';
+        $message .= sprintf('Failed asserting response has header "Content-Type: %s":', $contentType);
+        $message .= PHP_EOL . $response->headers;
+
+        \PHPUnit_Framework_TestCase::assertTrue($response->headers->contains('Content-Type', $contentType), $message);
     }
 
     /**
@@ -785,12 +801,7 @@ abstract class WebTestCase extends BaseWebTestCase
      */
     public static function assertArrayIntersectEquals(array $expected, array $actual, $message = null)
     {
-        $actualIntersect = [];
-        foreach (array_keys($expected) as $expectedKey) {
-            if (array_key_exists($expectedKey, $actual)) {
-                $actualIntersect[$expectedKey] = $actual[$expectedKey];
-            }
-        }
+        $actualIntersect = self::getRecursiveArrayIntersect($actual, $expected);
         \PHPUnit_Framework_TestCase::assertEquals(
             $expected,
             $actualIntersect,
@@ -799,10 +810,76 @@ abstract class WebTestCase extends BaseWebTestCase
     }
 
     /**
+     * Get intersect of $target array with values of keys in $source array.
+     * If key is an array in both places then the value of this key will be returned as intersection as well.
+     * Not associative arrays will be returned completely
+     *
+     * @param array $source
+     * @param array $target
+     * @return array
+     */
+    public static function getRecursiveArrayIntersect(array $target, array $source)
+    {
+        $result = [];
+
+        $isSourceAssociative = ArrayUtil::isAssoc($source);
+        $isTargetAssociative = ArrayUtil::isAssoc($target);
+        if (!$isSourceAssociative || !$isTargetAssociative) {
+            foreach ($target as $key => $value) {
+                if (array_key_exists($key, $source) && is_array($value) && is_array($source[$key])) {
+                    $result[$key] = self::getRecursiveArrayIntersect($value, $source[$key]);
+                } else {
+                    $result[$key] = $value;
+                }
+            }
+        } else {
+            foreach (array_keys($source) as $key) {
+                if (array_key_exists($key, $target)) {
+                    if (is_array($target[$key]) && is_array($source[$key])) {
+                        $result[$key] = self::getRecursiveArrayIntersect($target[$key], $source[$key]);
+                    } else {
+                        $result[$key] = $target[$key];
+                    }
+                }
+            }
+        }
+
+
+        return $result;
+    }
+
+    /**
+     * Sorts array by key recursively. This method is used to output failures of array response comparison in
+     * a more comprehensive way.
+     *
+     * @param array $array
+     */
+    protected static function sortArrayByKeyRecursively(array &$array)
+    {
+        ksort($array);
+
+        foreach ($array as $key => &$value) {
+            if (is_array($value)) {
+                self::sortArrayByKeyRecursively($value);
+            }
+        }
+    }
+
+    /**
      * {@inheritdoc}
+     *
+     * @return Client
      */
     protected function getClient()
     {
         return $this->client;
+    }
+
+    /**
+     * @return Client
+     */
+    protected function getSoapClient()
+    {
+        return $this->soapClient;
     }
 }

@@ -7,12 +7,12 @@ use Behat\Gherkin\Node\TableNode;
 use Behat\Mink\Element\NodeElement;
 use Oro\Bundle\ActivityListBundle\Tests\Behat\Element\ActivityList;
 use Oro\Bundle\TestFrameworkBundle\Behat\Context\OroFeatureContext;
-use Oro\Bundle\TestFrameworkBundle\Behat\Element\OroElementFactoryAware;
-use Oro\Bundle\TestFrameworkBundle\Tests\Behat\Context\ElementFactoryDictionary;
+use Oro\Bundle\TestFrameworkBundle\Behat\Element\OroPageObjectAware;
+use Oro\Bundle\TestFrameworkBundle\Tests\Behat\Context\PageObjectDictionary;
 
-class ActivityContext extends OroFeatureContext implements OroElementFactoryAware, SnippetAcceptingContext
+class ActivityContext extends OroFeatureContext implements OroPageObjectAware, SnippetAcceptingContext
 {
-    use ElementFactoryDictionary;
+    use PageObjectDictionary;
 
     /**
      * Assert that activity item with given text is present in activity list
@@ -48,6 +48,12 @@ class ActivityContext extends OroFeatureContext implements OroElementFactoryAwar
     }
 
     /**
+     * Get collapsed activity item and comment it
+     * Example: Given collapse "Contact with Charlie" in activity list
+     *          When I add activity comment with:
+     *            | Message    | Ask how his mood |
+     *            | Attachment | cat.jpg          |
+     *
      * @When /^(?:|I )add activity comment with:$/
      */
     public function iAddActivityCommentWith(TableNode $table)
@@ -58,6 +64,11 @@ class ActivityContext extends OroFeatureContext implements OroElementFactoryAwar
     }
 
     /**
+     * Edit comment in collapsed activity item
+     * Example: Given collapse "Contact with Charlie" in activity list
+     *          When I edit "Ask how his mood" activity comment with:
+     *            | Message    | Just wish a nice day |
+     *
      * @When /^(?:|I )edit "(?P<comment>[^"]+)" activity comment with:$/
      */
     public function iEditActivityCommentWith($comment, TableNode $table)
@@ -68,6 +79,10 @@ class ActivityContext extends OroFeatureContext implements OroElementFactoryAwar
     }
 
     /**
+     * Delete comment from collapsed activity item
+     * Example: Given I collapse "Contact with Charlie" in activity list
+     *          And delete "Just wish a nice day" activity comment
+     *
      * @When /^(?:|I )delete "(?P<comment>[^"]+)" activity comment$/
      */
     public function iDeleteActivityCommentWith($comment)
@@ -78,6 +93,8 @@ class ActivityContext extends OroFeatureContext implements OroElementFactoryAwar
     }
 
     /**
+     * Assert that activity list is empty
+     *
      * @Then there is no records in activity list
      */
     public function thereIsNoRecordsInActivityList()
@@ -111,6 +128,10 @@ class ActivityContext extends OroFeatureContext implements OroElementFactoryAwar
     }
 
     /**
+     * Click on paginations buttons in activity list
+     * Example: When go to older activities
+     * Example: When go to newer activities
+     *
      * @When /^(?:|I )go to (?P<linkLocator>(?:[nN]ewer|[oO]lder)) activities$/
      */
     public function goToNewerOrOlderActivities($linkLocator)
@@ -178,6 +199,9 @@ class ActivityContext extends OroFeatureContext implements OroElementFactoryAwar
     }
 
     /**
+     * Assert email thread icon
+     * Example: Then email "Work for you" should have thread icon
+     *
      * @Then email :arg1 should have thread icon
      */
     public function emailShouldHaveThreadIcon($content)
@@ -216,6 +240,7 @@ class ActivityContext extends OroFeatureContext implements OroElementFactoryAwar
 
     /**
      * Assert that one of contexts contains text
+     * Example: And I should see Charlie in Contexts
      *
      * @Then /^(?:|I )should see (?P<text>\w+) in Contexts$/
      */
@@ -229,8 +254,9 @@ class ActivityContext extends OroFeatureContext implements OroElementFactoryAwar
 
     /**
      * Search text in current collapsed activity
+     * Example: Then I should see Ask how his mood text in activity
      *
-     * @Then /^(?:|I )should see (?P<text>.+) text in activity/
+     * @Then /^(?:|I )should see (?P<text>.+) text in activity$/
      */
     public function iShouldSeeTextInCollapsedActivityItem($text)
     {
@@ -253,7 +279,7 @@ class ActivityContext extends OroFeatureContext implements OroElementFactoryAwar
     public function selectUserInActivityContextSelector($needle)
     {
         $contextSelector = $this->createElement('ContextSelector');
-        $contextSelector->find('css', 'span.icon-caret-down')->click();
+        $contextSelector->find('css', 'span.fa-caret-down')->click();
         $contexts = $contextSelector->findAll('css', 'ul.context-items-dropdown li');
 
         /** @var NodeElement $context */

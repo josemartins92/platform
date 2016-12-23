@@ -3,15 +3,14 @@ Sorter extension:
 
 Overview
 --------
-This extension provides sorting, also it responsible for passing "sorter" settings to view layer.
-Now implemented only sorter for ORM datasource.
+This extension provides sorting, also it is responsible for passing "sorter" settings to view layer.
 
 Settings
 ---------
 Sorters setting should be placed under `sorters` tree node.
 
 ```
-datagrid:
+datagrids:
     demo:
         source:
             type: orm
@@ -59,6 +58,7 @@ datagrid:
                 label: %oro_datagrid.extension.orm_sorter.class%::DIRECTION_DESC # sorters enabled by default, key is a column name
 
             multiple_sorting: true|false # is multisorting mode enabled ? False by default
+            disable_default_sorting: true|false # When set to true, no default sorting will be applied
 ```
 
 **Note:** _Customization could be done using `apply_callback` options_

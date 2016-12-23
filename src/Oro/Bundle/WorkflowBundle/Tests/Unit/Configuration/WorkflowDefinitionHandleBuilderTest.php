@@ -16,7 +16,7 @@ class WorkflowDefinitionHandleBuilderTest extends \PHPUnit_Framework_TestCase
         $workflowDefinition = new WorkflowDefinition();
         $workflowDefinition->setName($processedConfiguration['name']);
 
-        $handler = $this->getMock('Oro\Bundle\WorkflowBundle\Configuration\Handler\ConfigurationHandlerInterface');
+        $handler = $this->createMock('Oro\Bundle\WorkflowBundle\Configuration\Handler\ConfigurationHandlerInterface');
         $handler->expects($this->once())->method('handle')->with($rawConfiguration)
             ->will($this->returnValue($handledConfiguration));
 
@@ -34,7 +34,8 @@ class WorkflowDefinitionHandleBuilderTest extends \PHPUnit_Framework_TestCase
             ->with($processedConfiguration['name'], $processedConfiguration)
             ->will($this->returnValue($workflowDefinition));
 
-        $handleBuilder = new WorkflowDefinitionHandleBuilder($handler, $configuration, $configurationBuilder);
+        $handleBuilder = new WorkflowDefinitionHandleBuilder($configuration, $configurationBuilder);
+        $handleBuilder->addHandler($handler);
         $this->assertEquals($workflowDefinition, $handleBuilder->buildFromRawConfiguration($rawConfiguration));
     }
 }

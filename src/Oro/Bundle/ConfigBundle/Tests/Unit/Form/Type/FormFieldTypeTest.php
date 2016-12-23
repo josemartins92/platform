@@ -1,6 +1,6 @@
 <?php
 
-namespace ConfigBundle\Tests\Unit\Form\Type;
+namespace Oro\Bundle\ConfigBundle\Tests\Unit\Form\Type;
 
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvents;
@@ -108,8 +108,8 @@ class FormFieldTypeTest extends TypeTestCase
     public function testListeners($resettable, $expectedCount)
     {
         /* @var FormBuilderInterface|\PHPUnit_Framework_MockObject_MockObject $builder */
-        $builder = $this->getMock(FormBuilderInterface::class);
-        $fieldBuilder = $this->getMock(FormBuilderInterface::class);
+        $builder = $this->createMock(FormBuilderInterface::class);
+        $fieldBuilder = $this->createMock(FormBuilderInterface::class);
 
         $fieldBuilder->expects($this->exactly($expectedCount))
             ->method('addEventListener')
@@ -131,6 +131,7 @@ class FormFieldTypeTest extends TypeTestCase
                 'resettable' => $resettable,
                 'target_field_type' => 'array',
                 'target_field_options' => [],
+                'use_parent_field_options' => [],
             ]
         );
     }

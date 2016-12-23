@@ -7,8 +7,6 @@ services:
             - get_list
             - '@oro_api.config_provider'
             - '@oro_api.metadata_provider'
-        tags:
-            - { name: oro.api.action_processor }
 
     #
     # initialize
@@ -56,10 +54,18 @@ services:
         tags:
             - { name: oro.api.processor, action: get_list, group: initialize, requestType: json_api, priority: -20 }
 
-    oro_api.get_list.register_filters:
-        class: Oro\Bundle\ApiBundle\Processor\Shared\RegisterFilters
+    oro_api.get_list.handle_meta_property_filter:
+        class: Oro\Bundle\ApiBundle\Processor\Shared\HandleMetaPropertyFilter
+        arguments:
+            - '@oro_api.value_normalizer'
+        tags:
+            - { name: oro.api.processor, action: get_list, group: initialize, priority: -20 }
+
+    oro_api.get_list.register_configured_filters:
+        class: Oro\Bundle\ApiBundle\Processor\Shared\RegisterConfiguredFilters
         arguments:
             - '@oro_api.filter_factory'
+            - '@oro_api.doctrine_helper'
         tags:
             - { name: oro.api.processor, action: get_list, group: initialize, priority: -50 }
 
@@ -69,6 +75,15 @@ services:
             - '@oro_api.doctrine_helper'
         tags:
             - { name: oro.api.processor, action: get_list, group: initialize, requestType: json_api, priority: -55 }
+
+    oro_api.get_list.register_dynamic_filters:
+        class: Oro\Bundle\ApiBundle\Processor\Shared\RegisterDynamicFilters
+        arguments:
+            - '@oro_api.filter_factory'
+            - '@oro_api.doctrine_helper'
+            - '@oro_api.config_provider'
+        tags:
+            - { name: oro.api.processor, action: get_list, group: initialize, priority: -60 }
 
     oro_api.get_list.rest.set_default_sorting:
         class: Oro\Bundle\ApiBundle\Processor\Shared\Rest\SetDefaultSorting
@@ -105,6 +120,11 @@ services:
             - '@oro_api.value_normalizer'
         tags:
             - { name: oro.api.processor, action: get_list, group: initialize, requestType: json_api, priority: -200 }
+
+    oro_api.get_list.add_meta_property_filter:
+        class: Oro\Bundle\ApiBundle\Processor\Shared\AddMetaPropertyFilter
+        tags:
+            - { name: oro.api.processor, action: get_list, group: initialize, priority: -200 }
 
     #
     # normalize_input
@@ -172,9 +192,6 @@ services:
 
     oro_api.get_list.build_criteria:
         class: Oro\Bundle\ApiBundle\Processor\Shared\BuildCriteria
-        arguments:
-            - '@oro_api.config_provider'
-            - '@oro_api.doctrine_helper'
         tags:
             - { name: oro.api.processor, action: get_list, group: build_query, priority: 50 }
 
@@ -233,6 +250,14 @@ services:
     #
     # finalize
     #
+
+    oro_api.get_list.load_title_meta_property:
+        class: Oro\Bundle\ApiBundle\Processor\Shared\LoadTitleMetaPropertyForCollection
+        arguments:
+            - '@oro_api.entity_title_provider'
+            - '@oro_api.expanded_association_extractor'
+        tags:
+            - { name: oro.api.processor, action: get_list, group: finalize, priority: -10 }
 
     oro_api.get_list.set_total_count_header:
         class: Oro\Bundle\ApiBundle\Processor\Shared\SetTotalCountHeader
@@ -301,10 +326,15 @@ services:
             - { name: oro.api.processor, action: get_list, group: normalize_result, requestType: json_api, priority: -55 }
             - { name: monolog.logger, channel: api }
 
+    oro_api.get_list.set_result_document:
+        class: Oro\Bundle\ApiBundle\Processor\Shared\SetResultDocument
+        tags:
+            - { name: oro.api.processor, action: get_list, group: normalize_result, priority: -150 }
+
     oro_api.get_list.rest.process_errors:
         class: Oro\Bundle\ApiBundle\Processor\Shared\ProcessErrors
         tags:
-            - { name: oro.api.processor, action: get_list, group: normalize_result, requestType: rest, priority: -100 }
+            - { name: oro.api.processor, action: get_list, group: normalize_result, requestType: rest, priority: -190 }
 
     oro_api.get_list.validate_normalized_result_exists:
         class: Oro\Bundle\ApiBundle\Processor\Shared\ValidateNormalizedResultExists

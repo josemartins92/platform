@@ -4,7 +4,7 @@ namespace Oro\Bundle\InstallerBundle\Command;
 
 use Doctrine\ORM\EntityManager;
 
-use Symfony\Component\Console\Helper\TableHelper;
+use Symfony\Component\Console\Helper\Table as TableHelper;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -59,6 +59,12 @@ class InstallCommand extends AbstractCommand implements InstallCommandInterface
                 null,
                 InputOption::VALUE_NONE,
                 'Database will be dropped and all data will be deleted.'
+            )
+            ->addOption(
+                'skip-translations',
+                null,
+                InputOption::VALUE_NONE,
+                'Determines whether translation data need to be loaded or not'
             );
 
         parent::configure();
@@ -66,6 +72,8 @@ class InstallCommand extends AbstractCommand implements InstallCommandInterface
 
     /**
      * {@inheritdoc}
+     *
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
@@ -106,10 +114,10 @@ class InstallCommand extends AbstractCommand implements InstallCommandInterface
             $this->updateInstalledFlag(false);
             $commandExecutor->runCommand(
                 'cache:clear',
-                array(
+                [
                     '--no-optional-warmers' => true,
                     '--process-isolation'   => true
-                )
+                ]
             );
         }
 
@@ -443,7 +451,7 @@ class InstallCommand extends AbstractCommand implements InstallCommandInterface
                 [
                     '--force'             => true,
                     '--process-isolation' => true,
-                    '--timeout'           => $commandExecutor->getDefaultOption('process-timeout')
+                    '--timeout'           => $commandExecutor->getDefaultOption('process-timeout'),
                 ]
             )
             ->runCommand(
@@ -455,7 +463,13 @@ class InstallCommand extends AbstractCommand implements InstallCommandInterface
             ->runCommand(
                 'oro:workflow:definitions:load',
                 [
-                    '--process-isolation' => true,
+                    '--process-isolation' => true
+                ]
+            )
+            ->runCommand(
+                'oro:cron:definitions:load',
+                [
+                    '--process-isolation' => true
                 ]
             )
             ->runCommand(
@@ -490,15 +504,10 @@ class InstallCommand extends AbstractCommand implements InstallCommandInterface
             // load demo fixtures
             $commandExecutor->runCommand(
                 'oro:migration:data:load',
-                array(
+                [
                     '--process-isolation'  => true,
                     '--fixtures-type'      => 'demo',
-                    '--disabled-listeners' =>
-                        [
-                            'oro_dataaudit.listener.entity_listener',
-                            'oro_dataaudit.listener.deprecated_audit_data_listener'
-                        ]
-                )
+                ]
             );
         }
 
@@ -522,34 +531,31 @@ class InstallCommand extends AbstractCommand implements InstallCommandInterface
     ) {
         $output->writeln('<info>Preparing application.</info>');
 
-        $assetsOptions = array(
-            '--exclude' => array('OroInstallerBundle')
-        );
+        $assetsOptions = [
+            '--exclude' => ['OroInstallerBundle']
+        ];
         if ($input->hasOption('symlink') && $input->getOption('symlink')) {
             $assetsOptions['--symlink'] = true;
         }
 
-        $commandExecutor
-            ->runCommand(
-                'oro:navigation:init',
-                array(
-                    '--process-isolation' => true,
-                )
-            )
-            ->runCommand(
-                'oro:message-queue:create-queues',
-                array(
-                    '--process-isolation' => true,
-                )
-            )
-        ;
+        if (!$input->getOption('skip-translations')) {
+            $commandExecutor
+                ->runCommand('oro:translation:load', ['--process-isolation' => true]);
+        }
+
+        $commandExecutor->runCommand(
+            'oro:navigation:init',
+            [
+                '--process-isolation' => true,
+            ]
+        );
 
         if (!$skipAssets) {
             $commandExecutor->runCommand(
                 'fos:js-routing:dump',
-                array(
+                [
                     '--process-isolation' => true,
-                )
+                ]
             )
                 ->runCommand('oro:localization:dump')
                 ->runCommand(
@@ -558,22 +564,22 @@ class InstallCommand extends AbstractCommand implements InstallCommandInterface
                 )
                 ->runCommand(
                     'assetic:dump',
-                    array(
+                    [
                         '--process-isolation' => true,
-                    )
+                    ]
                 )
                 ->runCommand(
                     'oro:translation:dump',
-                    array(
+                    [
                         '--process-isolation' => true,
-                    )
+                    ]
                 )
                 ->runCommand(
                     'oro:requirejs:build',
-                    array(
+                    [
                         '--ignore-errors' => true,
                         '--process-isolation' => true,
-                    )
+                    ]
                 );
         }
         // run installer scripts
@@ -638,19 +644,19 @@ class InstallCommand extends AbstractCommand implements InstallCommandInterface
         $table = $this->getHelperSet()->get('table');
 
         $table
-            ->setHeaders(array('Check  ', $header))
-            ->setRows(array());
+            ->setHeaders(['Check  ', $header])
+            ->setRows([]);
 
         /** @var \Requirement $requirement */
         foreach ($collection as $requirement) {
             if ($requirement->isFulfilled()) {
-                $table->addRow(array('OK', $requirement->getTestMessage()));
+                $table->addRow(['OK', $requirement->getTestMessage()]);
             } else {
                 $table->addRow(
-                    array(
+                    [
                         $requirement->isOptional() ? 'WARNING' : 'ERROR',
                         $requirement->getHelpText()
-                    )
+                    ]
                 );
             }
         }

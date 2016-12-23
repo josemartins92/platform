@@ -102,8 +102,6 @@ services:
 
     oro_email.form.type.emailtemplate_rich_text:
         class: Oro\Bundle\EmailBundle\Form\Type\EmailTemplateRichTextType
-        arguments:
-            - %kernel.cache_dir%
         tags:
             - { name: form.type, alias: oro_email_template_rich_text }
 
@@ -151,6 +149,7 @@ services:
             - '@security.context'
             - '@oro_email.email_renderer'
             - '@oro_email.email.model.builder.helper'
+            - '@oro_config.user'
         tags:
             - { name: form.type, alias: oro_email_email }
 
@@ -236,6 +235,16 @@ services:
             - '@doctrine'
             - '@oro_email.mailbox.process_storage'
             - '@event_dispatcher'
+
+    oro_email.form.handler.email_configuration:
+        class: 'Oro\Bundle\EmailBundle\Form\Handler\EmailConfigurationHandler'
+        arguments:
+            - '@event_dispatcher'
+
+    oro_email.form.configurator.email_configuration:
+        class: 'Oro\Bundle\EmailBundle\Form\Configurator\EmailConfigurationConfigurator'
+        arguments:
+            - '@oro_security.encoder.mcrypt'
 
     oro_email.form.factory:
         class: %oro_email.form.factory.class%

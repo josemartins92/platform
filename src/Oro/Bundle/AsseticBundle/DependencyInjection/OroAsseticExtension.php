@@ -38,20 +38,20 @@ class OroAsseticExtension extends Extension
      */
     public function getBundlesAssetsConfiguration(ContainerBuilder $container, array $config)
     {
-        $result = array(
+        $result = [
             'css_debug_groups' => $config['css_debug'],
             'css_debug_all'    => $config['css_debug_all'],
-            'css'              => array()
-        );
+            'css'              => []
+        ];
 
         $configLoader = new CumulativeConfigLoader(
             'oro_assetic',
-            new YamlCumulativeFileLoader('Resources/config/assets.yml')
+            new YamlCumulativeFileLoader('Resources/config/oro/assets.yml')
         );
         $resources    = $configLoader->load($container);
         foreach ($resources as $resource) {
-            if (isset($resource->data['css'])) {
-                $result['css'] = array_merge_recursive($result['css'], $resource->data['css']);
+            if (isset($resource->data['assets']['css'])) {
+                $result['css'] = array_merge_recursive($result['css'], $resource->data['assets']['css']);
             }
         }
 

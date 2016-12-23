@@ -97,7 +97,8 @@ class DbalDriverTest extends \PHPUnit_Framework_TestCase
 
         $driver = new DbalDriver($session, $config);
 
-        $this->setExpectedException(\LogicException::class, 'Expire is not supported by the transport');
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('Expire is not supported by the transport');
         $driver->send($queue, $message);
     }
 
@@ -167,11 +168,6 @@ class DbalDriverTest extends \PHPUnit_Framework_TestCase
             ->with('queue')
             ->will($this->returnValue($queue))
         ;
-        $session
-            ->expects($this->once())
-            ->method('declareQueue')
-            ->with($this->identicalTo($queue))
-        ;
         $driver = new DbalDriver($session, new Config('', '', '', ''));
         $this->assertSame($queue, $driver->createQueue('queue'));
     }
@@ -217,7 +213,7 @@ class DbalDriverTest extends \PHPUnit_Framework_TestCase
      */
     private function createSessionStub($message = null, $messageProducer = null)
     {
-        $sessionMock = $this->getMock(DbalSession::class, [], [], '', false);
+        $sessionMock = $this->createMock(DbalSession::class);
         $sessionMock
             ->expects($this->any())
             ->method('createMessage')
@@ -244,7 +240,7 @@ class DbalDriverTest extends \PHPUnit_Framework_TestCase
      */
     private function createMessageProducer()
     {
-        return $this->getMock(DbalMessageProducer::class, [], [], '', false);
+        return $this->createMock(DbalMessageProducer::class);
     }
 
     /**
@@ -252,6 +248,6 @@ class DbalDriverTest extends \PHPUnit_Framework_TestCase
      */
     private function createSessionMock()
     {
-        return $this->getMock(DbalSession::class, [], [], '', false);
+        return $this->createMock(DbalSession::class);
     }
 }

@@ -3,8 +3,6 @@ OroDataAuditBundle
 
 The OroDataAuditBundle provides changelogs for your entities that are configurable on an entity and in the GUI. 
 
-**Please note**, *`Loggable` and `Versioned` annotations are not currently supported*.
-
 ###Entity Configuration
 
 DataAudit can only be enabled for Configurable entities. To add a property of an entity to the changelog,
@@ -32,7 +30,7 @@ use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
  *      routeView="acme_product_view",  # optional
  *      defaultValues={
  *          "entity"={ # entity configuration scope 'entity'
- *              "icon"="icon-product" # default icon class which will be used
+ *              "icon"="fa-product" # default icon class which will be used
  *                                    # can be changed via UI
  *          },
  *          "dataaudit"={ # entity configuration scope 'dataaudit'

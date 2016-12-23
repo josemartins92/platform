@@ -24,32 +24,18 @@ operations:
                         method: getRequestRoute
                         attribute: $.requestRoute
                     - '@call_service_method':
-                        service: oro_entity_config.provider.entity
-                        method: getClassName
-                        method_parameters: [$.data]
-                        attribute: $.className
+                        service: oro_entity_config.helper.entity_config
+                        method: getRoutes
+                        method_parameters: [$.data, ['name', 'update']]
+                        attribute: $.routes
                     - '@call_service_method':
-                        service: oro_entity_config.config_manager
-                        method: hasConfig
-                        method_parameters: [$.className]
-                        attribute: $.hasConfig
-                    - '@tree':
-                        conditions:
-                            '@eq': [$.hasConfig, true]
-                        actions:
-                            - '@call_service_method':
-                                service: oro_entity_config.helper.entity_config
-                                method: getRoutes
-                                method_parameters: [$.data, ['name', 'update']]
-                                attribute: $.routes
-                            - '@call_service_method':
-                                service: oro_entity_config.helper.entity_config
-                                method: getConfigValue
-                                method_parameters: [$.data, 'label']
-                                attribute: $.entityLabel
-                            - '@trans':
-                                id: $.entityLabel
-                                attribute: $.entityLabel
+                        service: oro_entity_config.helper.entity_config
+                        method: getConfigValue
+                        method_parameters: [$.data, 'label', false]
+                        attribute: $.entityLabel
+                    - '@trans':
+                        id: $.entityLabel
+                        attribute: $.entityLabel
 
     UPDATE:
         extends: CRUD_ACTION
@@ -67,7 +53,7 @@ operations:
         frontend_options:
             title: oro.action.edit_entity
         button_options:
-            icon: icon-edit
+            icon: fa-pencil-square-o
         actions:
             - '@redirect':
                 route: $.routes[update]
@@ -97,7 +83,7 @@ operations:
                 message_parameters:
                     entityLabel: $.entityLabel
         button_options:
-            icon: icon-trash
+            icon: fa-trash-o
         actions:
             - '@run_action_group':
                 action_group: DELETE
@@ -166,7 +152,7 @@ operations:
         frontend_options:
             title: oro.action.clone_entity
         button_options:
-            icon: icon-copy
+            icon: fa-files-o
 action_groups:
     DELETE:
         parameters:

@@ -1,6 +1,9 @@
-define(['underscore', 'orolocale/js/locale-settings/data'
-    ], function(_, settings) {
+define(function(require) {
     'use strict';
+
+    var _ = require('underscore');
+    var settings = require('orolocale/js/locale-settings/data');
+    var moduleConfig = require('module').config();
 
     /**
      * Locale settings
@@ -337,10 +340,7 @@ define(['underscore', 'orolocale/js/locale-settings/data'
         getCalendarDayOfWeekNames: function(width, asArray) {
             width = (width && this.settings.calendar.dow.hasOwnProperty(width)) ? width : 'wide';
             var result = this.settings.calendar.dow[width];
-            if (asArray) {
-                result = _.map(result, function(v) { return v; });
-            }
-            return result;
+            return asArray ? _.values(result) : _.clone(result);
         },
 
         /**
@@ -351,10 +351,10 @@ define(['underscore', 'orolocale/js/locale-settings/data'
          */
         getSortedDayOfWeekNames: function(width) {
             var dowNames = this.getCalendarDayOfWeekNames(width, true);
-            _.times(this.getCalendarFirstDayOfWeek() - 1, function() {
-                dowNames.push(dowNames.shift());
-            });
-
+            var splitPoint = this.getCalendarFirstDayOfWeek() - 1;
+            if (splitPoint > 0 && splitPoint < dowNames.length) {
+                dowNames = dowNames.slice(splitPoint).concat(dowNames.slice(0, splitPoint));
+            }
             return dowNames;
         },
 
@@ -393,6 +393,8 @@ define(['underscore', 'orolocale/js/locale-settings/data'
     };
 
     localeSettings.extendSettings(settings);
+    localeSettings.extendDefaults(moduleConfig.defaults);
+    localeSettings.extendSettings(moduleConfig.settings);
 
     return localeSettings;
 });

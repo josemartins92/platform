@@ -21,14 +21,18 @@ class EntityDefinitionConfig extends EntityConfig implements EntityConfigInterfa
     use Traits\SortingTrait;
     use Traits\InclusionTrait;
     use Traits\FieldsetTrait;
+    use Traits\MetaPropertyTrait;
     use Traits\FormTrait;
     use Traits\StatusCodesTrait;
 
     /** a short, human-readable description of API resource */
     const DESCRIPTION = 'description';
 
-    /** a detailed documentation of API resource */
+    /** a detailed documentation of API resource or link to a .md file that will be used to retrieve a documentation */
     const DOCUMENTATION = 'documentation';
+
+    /** resource link to a .md file that will be used to retrieve a documentation */
+    const DOCUMENTATION_RESOURCE = 'documentation_resource';
 
     /** the name of ACL resource */
     const ACL_RESOURCE = 'acl_resource';
@@ -44,6 +48,9 @@ class EntityDefinitionConfig extends EntityConfig implements EntityConfigInterfa
 
     /** a flag indicates whether a requesting of a restricted set of fields is disabled */
     const DISABLE_FIELDSET = 'disable_fieldset';
+
+    /** a flag indicates whether a requesting of additional meta properties is disabled */
+    const DISABLE_META_PROPERTIES = 'disable_meta_properties';
 
     /** a handler that should be used to delete the entity */
     const DELETE_HANDLER = 'delete_handler';
@@ -305,6 +312,42 @@ class EntityDefinitionConfig extends EntityConfig implements EntityConfigInterfa
             $this->items[self::DELETE_HANDLER] = $handler;
         } else {
             unset($this->items[self::DELETE_HANDLER]);
+        }
+    }
+
+    /**
+     * Indicates whether a link to documentation file exists.
+     *
+     * @return bool
+     */
+    public function hasDocumentationResource()
+    {
+        return array_key_exists(self::DOCUMENTATION_RESOURCE, $this->items);
+    }
+
+    /**
+     * Gets a link to file contains the documentation for API resource.
+     *
+     * @return string|null
+     */
+    public function getDocumentationResource()
+    {
+        return array_key_exists(self::DOCUMENTATION_RESOURCE, $this->items)
+            ? $this->items[self::DOCUMENTATION_RESOURCE]
+            : null;
+    }
+
+    /**
+     * Sets a link to file contains the documentation for API resource.
+     *
+     * @param string|null $resource
+     */
+    public function setDocumentationResource($resource)
+    {
+        if ($resource) {
+            $this->items[self::DOCUMENTATION_RESOURCE] = $resource;
+        } else {
+            unset($this->items[self::DOCUMENTATION_RESOURCE]);
         }
     }
 }

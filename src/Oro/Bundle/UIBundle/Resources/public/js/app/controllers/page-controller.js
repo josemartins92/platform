@@ -53,6 +53,7 @@ define([
             mediator.setHandler('isInAction', function() {
                 return isInAction;
             });
+            this._setNavigationHandlers();
         },
 
         /**
@@ -79,7 +80,6 @@ define([
             var cacheItem;
 
             var url = this._combineRouteUrl(route);
-            this._setNavigationHandlers(url);
             var args = {// collect arguments to reuse in events of page_fetch state change
                 params: params,
                 route: route,
@@ -182,12 +182,23 @@ define([
 
             this.publishEvent('page:update', pageData, actionArgs, jqXHR, updatePromises);
 
-            // once all views has been updated, trigger page:afterChange
-            $.when.apply($, updatePromises).done(function() {
-                // let all embedded inline scripts finish their execution
-                asap(function() {
-                    self.publishEvent('page:afterChange');
+            // execute callback function when all promises are either resolved or rejected
+            function waitPromises(promises, callback) {
+                $.when.apply($, promises).always(function() {
+                    var pendingPromises = _.filter(promises, function(promise) {
+                        return promise.state() === 'pending';
+                    });
+                    if (pendingPromises.length) {
+                        waitPromises(pendingPromises, callback);
+                    } else {
+                        callback();
+                    }
                 });
+            }
+
+            // once all views has been updated, trigger page:afterChange
+            waitPromises(updatePromises, function() {
+                self.publishEvent('page:afterChange');
             });
         },
 
@@ -305,10 +316,9 @@ define([
         /**
          * Register handler for page reload and redirect
          *
-         * @param {string} url
          * @private
          */
-        _setNavigationHandlers: function(url) {
+        _setNavigationHandlers: function() {
             mediator.setHandler('redirectTo', function(pathDesc, params, options) {
                 var queue = [];
                 mediator.trigger('page:beforeRedirectTo', queue, pathDesc, params, options);
@@ -324,7 +334,7 @@ define([
                 _.defaults(options, {forceStartup: true, force: true});
                 $.when.apply($, queue).done(_.bind(function(customOptions) {
                     _.extend(options, customOptions || {});
-                    this._processRedirect({url: url}, options);
+                    this._processRedirect({url: location.href}, options);
                     mediator.trigger('page:afterRefresh');
                 }, this));
             }, this);

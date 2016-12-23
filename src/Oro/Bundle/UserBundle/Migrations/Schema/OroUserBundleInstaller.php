@@ -4,12 +4,15 @@ namespace Oro\Bundle\UserBundle\Migrations\Schema;
 
 use Doctrine\DBAL\Schema\Schema;
 
-use Oro\Bundle\AttachmentBundle\Migration\Extension\AttachmentExtension;
 use Oro\Bundle\AttachmentBundle\Migration\Extension\AttachmentExtensionAwareInterface;
 use Oro\Bundle\ActivityBundle\Migration\Extension\ActivityExtension;
 use Oro\Bundle\ActivityBundle\Migration\Extension\ActivityExtensionAwareInterface;
+use Oro\Bundle\AttachmentBundle\Migration\Extension\AttachmentExtensionAwareTrait;
 use Oro\Bundle\EntityBundle\EntityConfig\DatagridScope;
 use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
+use Oro\Bundle\EntityExtendBundle\Extend\RelationType;
+use Oro\Bundle\EntityExtendBundle\Migration\Extension\ExtendExtension;
+use Oro\Bundle\EntityExtendBundle\Migration\Extension\ExtendExtensionAwareInterface;
 use Oro\Bundle\MigrationBundle\Migration\Installation;
 use Oro\Bundle\MigrationBundle\Migration\QueryBag;
 use Oro\Bundle\UserBundle\Migrations\Schema\v1_0\OroUserBundle;
@@ -29,6 +32,9 @@ use Oro\Bundle\UserBundle\Migrations\Schema\v1_18\ChangeEmailUserFolderRelation 
 use Oro\Bundle\UserBundle\Migrations\Schema\v1_18\AddEmailUserColumn;
 use Oro\Bundle\UserBundle\Migrations\Schema\v1_18\DropEmailUserColumn;
 use Oro\Bundle\UserBundle\Migrations\Schema\v1_19\AddFirstNameLastNameIndex;
+use Oro\Bundle\UserBundle\Migrations\Schema\v1_22\AddImpersonationTable;
+use Oro\Bundle\UserBundle\Migrations\Schema\v1_24\AddAuthStatusColumn;
+use Oro\Bundle\UserBundle\Migrations\Schema\v1_24\AddImpersonationIpColumn;
 
 /**
  * @SuppressWarnings(PHPMD.TooManyMethods)
@@ -37,28 +43,23 @@ use Oro\Bundle\UserBundle\Migrations\Schema\v1_19\AddFirstNameLastNameIndex;
 class OroUserBundleInstaller implements
     Installation,
     AttachmentExtensionAwareInterface,
+    ExtendExtensionAwareInterface,
     ActivityExtensionAwareInterface
 {
-    /** @var AttachmentExtension */
-    protected $attachmentExtension;
+    use AttachmentExtensionAwareTrait;
 
     /** @var ActivityExtension */
     protected $activityExtension;
+
+    /** @var ExtendExtension */
+    protected $extendExtension;
 
     /**
      * {@inheritdoc}
      */
     public function getMigrationVersion()
     {
-        return 'v1_21';
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function setAttachmentExtension(AttachmentExtension $attachmentExtension)
-    {
-        $this->attachmentExtension = $attachmentExtension;
+        return 'v1_24';
     }
 
     /**
@@ -67,6 +68,14 @@ class OroUserBundleInstaller implements
     public function setActivityExtension(ActivityExtension $activityExtension)
     {
         $this->activityExtension = $activityExtension;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setExtendExtension(ExtendExtension $extendExtension)
+    {
+        $this->extendExtension = $extendExtension;
     }
 
     /**
@@ -130,6 +139,11 @@ class OroUserBundleInstaller implements
         AddEmailUserColumn::updateOroEmailUserTable($schema);
         DropEmailUserColumn::updateOroEmailUserTable($schema);
         AddFirstNameLastNameIndex::addFirstNameLastNameIndex($schema);
+        AddImpersonationTable::createOroUserImpersonationTable($schema);
+        AddImpersonationIpColumn::addColumn($schema);
+        AddAuthStatusColumn::addAuthStatusFieldAndValues($schema, $queries, $this->extendExtension);
+
+        $this->addRelationsToScope($schema);
     }
 
     /**
@@ -519,5 +533,30 @@ class OroUserBundleInstaller implements
         $table = $schema->getTable('oro_access_group');
         $table->addUniqueIndex(['name', 'organization_id'], 'uq_name_org_idx');
         $table->addIndex(['business_unit_owner_id'], 'IDX_FEF9EDB759294170', []);
+    }
+
+    /**
+     * @param Schema $schema
+     */
+    protected function addRelationsToScope(Schema $schema)
+    {
+        if ($schema->hasTable('oro_scope')) {
+            $this->extendExtension->addManyToOneRelation(
+                $schema,
+                'oro_scope',
+                'user',
+                'oro_user',
+                'id',
+                [
+                    'extend' => [
+                        'owner' => ExtendScope::OWNER_CUSTOM,
+                        'cascade' => ['all'],
+                        'on_delete' => 'CASCADE',
+                        'nullable' => true
+                    ]
+                ],
+                RelationType::MANY_TO_ONE
+            );
+        }
     }
 }

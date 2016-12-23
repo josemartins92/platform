@@ -5,7 +5,7 @@ config:
         'oroworkflow/js/extend/jsplumb':
             'jsplumb': 'jsplumb'
     paths:
-        'jsplumb':                                                  'bundles/components/jsplumb/dom.jsPlumb.js'
+        'jsplumb':                                                  'bundles/bowerassets/jsplumb/dist/js/jsPlumb-1.7.10.js'
         'oroworkflow/js/transition-handler':                        'bundles/oroworkflow/js/transition-handler.js'
         'oroworkflow/js/transition-event-handlers':                 'bundles/oroworkflow/js/transition-event-handlers.js'
         'oroworkflow/js/save-and-transit-handler':                  'bundles/oroworkflow/js/save-and-transit-handler.js'
@@ -22,3 +22,5 @@ config:
         'oroworkflow/js/app/components/activate-form-widget-component': 'bundles/oroworkflow/js/app/components/activate-form-widget-component.js'
         'oroworkflow/js/app/views/workflow-activate-btn-view': 'bundles/oroworkflow/js/app/views/workflow-activate-btn-view.js'
         'oroworkflow/js/app/views/workflow-deactivate-btn-view': 'bundles/oroworkflow/js/app/views/workflow-deactivate-btn-view.js'
+        'oroworkflow/js/app/components/button-component': 'bundles/oroworkflow/js/app/components/button-component.js'
+        'oroworkflow/js/datagrid/workflow-datagrid-builder': 'oroworkflow/js/datagrid/workflow-datagrid-builder.js'

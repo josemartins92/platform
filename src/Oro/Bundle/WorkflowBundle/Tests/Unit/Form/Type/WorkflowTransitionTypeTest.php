@@ -2,13 +2,16 @@
 
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Form\Type;
 
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\Form\FormView;
 use Symfony\Component\Form\PreloadedExtension;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowItem;
-use Oro\Bundle\WorkflowBundle\Model\Workflow;
+use Oro\Bundle\WorkflowBundle\Helper\WorkflowTranslationHelper;
 use Oro\Bundle\WorkflowBundle\Form\Type\WorkflowAttributesType;
 use Oro\Bundle\WorkflowBundle\Form\Type\WorkflowTransitionType;
+use Oro\Bundle\WorkflowBundle\Model\Workflow;
 use Oro\Bundle\WorkflowBundle\Validator\Constraints\TransitionIsAllowed;
 
 class WorkflowTransitionTypeTest extends AbstractWorkflowAttributesTypeTestCase
@@ -23,16 +26,19 @@ class WorkflowTransitionTypeTest extends AbstractWorkflowAttributesTypeTestCase
         $this->type = new WorkflowTransitionType();
     }
 
+    /**
+     * @return array
+     */
     protected function getExtensions()
     {
-        return array(
+        return [
             new PreloadedExtension(
-                array(
+                [
                     WorkflowAttributesType::NAME => $this->createWorkflowAttributesType(),
-                ),
-                array()
+                ],
+                []
             )
-        );
+        ];
     }
 
     public function testGetName()
@@ -47,12 +53,12 @@ class WorkflowTransitionTypeTest extends AbstractWorkflowAttributesTypeTestCase
 
     public function testBuildForm()
     {
-        $builder = $this->getMock('Symfony\Component\Form\Test\FormBuilderInterface');
+        $builder = $this->createMock('Symfony\Component\Form\Test\FormBuilderInterface');
 
         $workflowItem = new WorkflowItem();
 
         $transitionName = 'test';
-        $transition = $this->getMock('Oro\Bundle\WorkflowBundle\Model\Transition');
+        $transition = $this->createMock('Oro\Bundle\WorkflowBundle\Model\Transition');
         $transition->expects($this->once())->method('getName')->will($this->returnValue($transitionName));
 
         $doctrineHelper = $this->getMockBuilder('Oro\Bundle\EntityBundle\ORM\DoctrineHelper')

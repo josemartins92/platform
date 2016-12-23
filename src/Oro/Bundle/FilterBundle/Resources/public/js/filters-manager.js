@@ -2,7 +2,6 @@ define(function(require) {
     'use strict';
 
     var FiltersManager;
-    var DROPDOWN_TOGGLE_SELECTOR = '[data-toggle=dropdown]';
     var $ = require('jquery');
     var _ = require('underscore');
     var __ = require('orotranslation/js/translator');
@@ -11,6 +10,8 @@ define(function(require) {
     var BaseView = require('oroui/js/app/views/base/view');
     var MultiselectDecorator = require('./multiselect-decorator');
     var filterWrapper = require('./datafilter-wrapper');
+    var FiltersStateView = require('./app/views/filters-state-view');
+    var persistentStorage = require('oroui/js/persistent-storage');
 
     /**
      * View that represents all grid filters
@@ -41,6 +42,14 @@ define(function(require) {
          * Template
          */
         template: null,
+
+        /**
+         * Mode of filters displaying
+         *
+         * @type {Integer}
+         * @property
+         */
+        viewMode: NaN,
 
         /**
          * Filter list input selector
@@ -81,7 +90,7 @@ define(function(require) {
         events: {
             'change [data-action=add-filter-select]': '_onChangeFilterSelect',
             'click .reset-filter-button': '_onReset',
-            'click a.dropdown-toggle': '_onDropdownToggle'
+            'click a[data-name="filters-dropdown"]': '_onDropdownToggle'
         },
 
         /**
@@ -92,26 +101,28 @@ define(function(require) {
          * @param {String} [options.addButtonHint]
          */
         initialize: function(options) {
-            var filterListeners;
-
+            var storedMode = persistentStorage.getItem(FiltersManager.STORAGE_KEY);
+            this.viewMode = storedMode !== null ? Number(storedMode) : FiltersManager.STATE_VIEW_MODE;
             this.template = _.template($(this.templateSelector).html());
 
             this.filters = {};
 
-            _.extend(this, _.pick(options, ['addButtonHint']));
+            _.extend(this, _.pick(options, ['addButtonHint', 'stateViewElement']));
 
             if (options.filters) {
                 _.extend(this.filters, options.filters);
             }
 
-            filterListeners = {
+            var filterListeners = {
                 'update': this._onFilterUpdated,
-                'disable': this._onFilterDisabled
+                'disable': this._onFilterDisabled,
+                'showCriteria': this._onFilterShowCriteria
             };
 
             if (tools.isMobile()) {
+                var outsideActionEvents = 'click.' + this.cid + ' shown.bs.dropdown.' + this.cid;
                 filterListeners.updateCriteriaClick = this._onUpdateCriteriaClick;
-                $('body').on('click.' + this.cid, DROPDOWN_TOGGLE_SELECTOR, _.bind(this._onBodyClick, this));
+                $('body').on(outsideActionEvents, this._onOutsideActionEvent.bind(this));
             }
 
             _.each(this.filters, function(filter) {
@@ -121,6 +132,19 @@ define(function(require) {
 
                 this.listenTo(filter, filterListeners);
             }, this);
+
+            if ('filtersStateElement' in options) {
+                var $container = this.$el.closest('body, .ui-dialog');
+                var filtersStateView = new FiltersStateView({
+                    el: $container.find(options.filtersStateElement).first(),
+                    filters: options.filters
+                });
+
+                this.subview('filters-state', filtersStateView);
+                this.listenTo(filtersStateView, 'clicked', function() {
+                    this.setViewMode(FiltersManager.MANAGE_VIEW_MODE);
+                });
+            }
 
             FiltersManager.__super__.initialize.apply(this, arguments);
         },
@@ -165,6 +189,14 @@ define(function(require) {
             this.trigger('disableFilter', filter);
             this.disableFilter(filter);
             this.trigger('afterDisableFilter', filter);
+        },
+
+        _onFilterShowCriteria: function(shownFilter) {
+            _.each(this.filters, function(filter) {
+                if (filter !== shownFilter) {
+                    _.result(filter, 'ensurePopupCriteriaClosed');
+                }
+            });
         },
 
         /**
@@ -236,7 +268,7 @@ define(function(require) {
             var optionsSelectors = [];
 
             _.each(filters, function(filter) {
-                if (!filter.isRendered()) {
+                if (filter.visible && !filter.isRendered()) {
                     var oldEl = filter.$el;
                     // filter rendering process replaces $el
                     filter.render();
@@ -305,7 +337,7 @@ define(function(require) {
                 if (_.isFunction(filter.setDropdownContainer)) {
                     filter.setDropdownContainer(this.dropdownContainer);
                 }
-                if (!filter.enabled) {
+                if (!filter.enabled || !filter.visible) {
                     // append element to reserve space
                     // empty elements are hidden by default
                     $filterItems.append(filter.$el);
@@ -314,6 +346,7 @@ define(function(require) {
                 filter.render();
                 $filterItems.append(filter.$el);
                 filter.rendered();
+
             }, this);
 
             this.trigger('rendered');
@@ -322,6 +355,15 @@ define(function(require) {
                 this.$el.hide();
             } else {
                 this._initializeSelectWidget();
+            }
+            var filtersStateView = this.subview('filters-state');
+            if (filtersStateView) {
+                filtersStateView.render();
+                if (this.viewMode === FiltersManager.MANAGE_VIEW_MODE) {
+                    filtersStateView.hide();
+                } else if (this.viewMode === FiltersManager.STATE_VIEW_MODE) {
+                    this.$el.hide();
+                }
             }
 
             return this;
@@ -410,7 +452,9 @@ define(function(require) {
          * Reset button click handler
          */
         _onReset: function() {
-            mediator.trigger('datagrid:doReset:' + this.collection.inputName);
+            this.collection.state.filters = {};
+            this.collection.trigger('updateState', this.collection);
+            mediator.trigger('datagrid:doRefresh:' + this.collection.inputName);
         },
 
         /**
@@ -419,13 +463,8 @@ define(function(require) {
          * @private
          */
         _onDropdownToggle: function(e) {
-            var $dropdown = this.$('.dropdown');
             e.preventDefault();
-            e.stopPropagation();
-            if (!$dropdown.hasClass('oro-open')) {
-                $(DROPDOWN_TOGGLE_SELECTOR).trigger('tohide.bs.dropdown');
-            }
-            $dropdown.toggleClass('oro-open');
+            this.$('.filter-box > .dropdown').toggleClass('open');
         },
 
         /**
@@ -435,7 +474,7 @@ define(function(require) {
          * @param {jQuery.Event} e
          * @protected
          */
-        _onBodyClick: function(e) {
+        _onOutsideActionEvent: function(e) {
             if (!_.contains($(e.target).parents(), this.el)) {
                 this.closeDropdown();
             }
@@ -454,7 +493,37 @@ define(function(require) {
         _onUpdateCriteriaClick: function(filter) {
             filter.once('update', this.closeDropdown, this);
             _.defer(_.bind(filter.off, filter, 'update', this.closeDropdown, this));
+        },
+
+        getViewMode: function() {
+            return this.viewMode;
+        },
+
+        setViewMode: function(mode) {
+            if (this.viewMode === mode) {
+                return;
+            }
+            if (mode === FiltersManager.STATE_VIEW_MODE) {
+                this.$el.hide();
+                _.result(this.subview('filters-state'), 'show');
+            } else if (mode === FiltersManager.MANAGE_VIEW_MODE) {
+                if (!_.isEmpty(this.filters)) {
+                    this.$el.show();
+                }
+                _.result(this.subview('filters-state'), 'hide');
+            } else {
+                return;
+            }
+            this.viewMode = mode;
+            persistentStorage.setItem(FiltersManager.STORAGE_KEY, mode);
+            this.trigger('changeViewMode', mode);
         }
+    });
+
+    _.extend(FiltersManager, {
+        MANAGE_VIEW_MODE: 0,
+        STATE_VIEW_MODE: 1,
+        STORAGE_KEY: 'filter-view-mode-state'
     });
 
     return FiltersManager;

@@ -14,6 +14,7 @@ default: &default
         Behat\Symfony2Extension:
             kernel:
                 env: 'prod'
+                debug: false
             context:
                 path_suffix: 'Tests/Behat/Features'
                 class_suffix: 'Tests\Behat\Context\FeatureContext'
@@ -24,6 +25,8 @@ default: &default
                 - Oro\Bundle\ActivityListBundle\Tests\Behat\Context\ActivityContext
                 - Oro\Bundle\DataGridBundle\Tests\Behat\Context\GridContext
                 - Oro\Bundle\SecurityBundle\Tests\Behat\Context\ACLContext
+                - Oro\Bundle\SearchBundle\Tests\Behat\Context\SearchContext
+                - Oro\Bundle\ImportExportBundle\Tests\Behat\Context\ImportExportContext
     suites: []
 
 selenium2:

@@ -41,15 +41,15 @@ define(function(require) {
             },
             icons: {
                 new: {
-                    html: '<i class="icon-folder-close-alt"></i>',
+                    html: '<i class="fa-folder-o"></i>',
                     event: 'expandChildItems'
                 },
                 edited: {
-                    html: '<i class="icon-folder-close"></i>',
+                    html: '<i class="fa-folder"></i>',
                     event: 'expandChildItems'
                 },
                 save: {
-                    html: '<i class="icon-folder-open"></i>',
+                    html: '<i class="fa-folder-open"></i>',
                     event: 'collapseChildItems'
                 }
             }
@@ -316,17 +316,24 @@ define(function(require) {
          * @param {jQuery} $toValue
          */
         cloneValue: function($fromValue, $toValue) {
+            var isChanged = false;
             $fromValue.each(function(i) {
                 var toValue = $toValue.get(i);
-
                 if ($(this).is(':checkbox') || $(this).is(':radio')) {
-                    toValue.checked = this.checked;
+                    if (toValue.checked !== this.checked) {
+                        isChanged = true;
+                        toValue.checked = this.checked;
+                    }
                 } else {
-                    $(toValue).val($(this).val());
+                    if ($(toValue).val() !== $(this).val()) {
+                        isChanged = true;
+                        $(toValue).val($(this).val());
+                    }
                 }
             });
-
-            $toValue.filter(':first').change();
+            if (isChanged) {
+                $toValue.filter(':first').change();
+            }
         },
 
         /**

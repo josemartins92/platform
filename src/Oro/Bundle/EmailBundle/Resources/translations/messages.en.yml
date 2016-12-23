@@ -6,6 +6,8 @@ oro:
             sent:        Sent
             unread:      Unread Emails
             view_all:    View All
+            view_email:  View Email
+            reply:       Reply
             description: This widget allows you to see most recent additions to your inbox and outbox
 
     email:
@@ -16,7 +18,7 @@ oro:
         filter.inactive: inactive
         controller:
             emailtemplate.saved.message: "Template saved"
-            job_scheduled.message: "The job has been added to the queue %link%"
+            job_scheduled.message: "The job has been added to the queue"
             job_progress: Check progress
         form:
             choose_template:                     ""
@@ -39,6 +41,30 @@ oro:
 
         system_configuration:
             email_configuration: Email Configuration
+            email_settings: Email Settings
+            feature_enabled:
+                label: Enable User Emails
+
+            smtp_settings:
+                label: SMTP Settings
+                host:
+                    label: Host
+                port:
+                    label: Port
+                encryption:
+                    label: Encryption
+                    none:
+                        label: None
+                    ssl:
+                        label: SSL
+                    tls:
+                        label: TLS
+                username:
+                    label: Username
+                password:
+                    label: Password
+                check_connection:
+                  label: Check SMTP Connection
 
             signature_configuration:
                 label: Signature
@@ -74,6 +100,9 @@ oro:
                 label: System Mailboxes
                 add_mailbox.label: Add Mailbox
 
+            template_configuration:
+                label: HTML in templates
+
             show_recent_emails_in_user_bar:
                 label: Show recent emails
 
@@ -85,9 +114,25 @@ oro:
                 preview_limit:
                     label: Attachments preview limit
 
+            sanitize_html:
+                label: Enable HTML purifier
+                tooltip: Disabling HTML purifier will allow users to paste any HTML code into template or email body editor without tag stripping.
+
+            smtp_settings:
+                host:
+                    label: Host
+                port:
+                    label: Port
+                encryption:
+                    label: Encryption
+                username:
+                    label: Username
+                password:
+                    label: Password
+
         emailtemplate:
-            entity_label:        Template
-            entity_plural_label: Templates
+            entity_label:        Email Template
+            entity_plural_label: Email Templates
             edit_entity:         Edit email template "%name%"
             clone_entity:        Clone email template
             entity_description:  Represent email template
@@ -137,6 +182,7 @@ oro:
             view: View
 
         menu:
+            emailtemplate.entity_plural_label: Templates
             emailtemplate_list.description: List of email templates
             user_emails: My Emails
             compose: Compose
@@ -169,6 +215,7 @@ oro:
             emails:
                 action:
                     view: "View"
+                    reply: "Reply"
                     mark_as_read: "Mark As Read"
                     mark_as_unread: "Mark As Unread"
                     enable_to_change_status: "Enable to change status"

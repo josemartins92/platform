@@ -38,7 +38,7 @@ class FormProcessorTestCase extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->context = new FormContextStub($this->configProvider, $this->metadataProvider);
+        $this->context = $this->createContext();
         $this->context->setVersion(self::TEST_VERSION);
         $this->context->getRequestType()->add(self::TEST_REQUEST_TYPE);
         $this->context->setConfigExtras(
@@ -46,6 +46,14 @@ class FormProcessorTestCase extends \PHPUnit_Framework_TestCase
                 new EntityDefinitionConfigExtra($this->context->getAction())
             ]
         );
+    }
+
+    /**
+     * @return FormContext
+     */
+    protected function createContext()
+    {
+        return new FormContextStub($this->configProvider, $this->metadataProvider);
     }
 
     /**
@@ -58,7 +66,7 @@ class FormProcessorTestCase extends \PHPUnit_Framework_TestCase
         $formFactory = Forms::createFormFactoryBuilder()
             ->addExtensions(array_merge($this->getFormExtensions(), $extensions))
             ->getFormFactory();
-        $dispatcher = $this->getMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
+        $dispatcher = $this->createMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
 
         return new FormBuilder(null, null, $dispatcher, $formFactory);
     }

@@ -37,7 +37,8 @@ class FeatureToggleConfigurationTest extends \PHPUnit_Framework_TestCase
                 'label' => 'Feature 1 Label',
                 'dependencies' => [],
                 'routes' => [],
-                'configuration' => []
+                'configuration' => [],
+                'entities' => [],
             ]
         ];
 
@@ -52,7 +53,8 @@ class FeatureToggleConfigurationTest extends \PHPUnit_Framework_TestCase
                 'label' => 'Feature 1 Label',
                 'dependencies' => ['feature_one', 'feature_two'],
                 'routes' => ['oro_feature_route'],
-                'configuration' => ['oro_feature', 'oro_another']
+                'configuration' => ['oro_feature', 'oro_another'],
+                'entities' => [],
             ],
         ];
 
@@ -62,7 +64,8 @@ class FeatureToggleConfigurationTest extends \PHPUnit_Framework_TestCase
                 'label' => 'Feature 1 Label',
                 'dependencies' => ['feature_one', 'feature_two'],
                 'routes' => ['oro_feature_route'],
-                'configuration' => ['oro_feature', 'oro_another']
+                'configuration' => ['oro_feature', 'oro_another'],
+                'entities' => [],
             ]
         ];
 
@@ -77,10 +80,8 @@ class FeatureToggleConfigurationTest extends \PHPUnit_Framework_TestCase
      */
     public function testProcessInvalidConfiguration(array $inputData, $expectedExceptionMessage)
     {
-        $this->setExpectedException(
-            'Symfony\Component\Config\Definition\Exception\InvalidConfigurationException',
-            $expectedExceptionMessage
-        );
+        $this->expectException('Symfony\Component\Config\Definition\Exception\InvalidConfigurationException');
+        $this->expectExceptionMessage($expectedExceptionMessage);
 
         $this->processConfiguration($inputData);
     }

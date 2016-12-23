@@ -51,6 +51,9 @@
       text-shadow: 1px 1px 1px #000000;
     }
   } // Ends .title-box
+  .oro-hint {
+    margin: 0 0 14px;
+  }
   .add-on {
     width: 105px;
     height: 36px;
@@ -124,5 +127,31 @@
     padding: 30px 38px;
     background: #fff;
     .border-radius(0 0 5px 5px);
+  }
+  span.validation-failed {
+    margin: 0 0 14px 14px;
+  }
+}
+.form-reset {
+  .form-buttons{
+    margin-top: 10px;
+  }
+  .add-on {
+    width: 155px;
+
+    & + input[type="text"],
+    & + input[type="password"],
+    & + select {
+      width: 156px;
+    }
+  }
+}
+
+.form-two-factor {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  select {
+    width: 310px;
   }
 }

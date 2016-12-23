@@ -29,7 +29,7 @@ class EmailTest extends \PHPUnit_Framework_TestCase
 
     public function testFromEmailAddressGetterAndSetter()
     {
-        $emailAddress = $this->getMock('Oro\Bundle\EmailBundle\Entity\EmailAddress');
+        $emailAddress = $this->createMock('Oro\Bundle\EmailBundle\Entity\EmailAddress');
 
         $entity = new Email();
         $entity->setFromEmailAddress($emailAddress);
@@ -39,17 +39,17 @@ class EmailTest extends \PHPUnit_Framework_TestCase
 
     public function testRecipientGetterAndSetter()
     {
-        $toRecipient = $this->getMock('Oro\Bundle\EmailBundle\Entity\EmailRecipient');
+        $toRecipient = $this->createMock('Oro\Bundle\EmailBundle\Entity\EmailRecipient');
         $toRecipient->expects($this->any())
             ->method('getType')
             ->will($this->returnValue('to'));
 
-        $ccRecipient = $this->getMock('Oro\Bundle\EmailBundle\Entity\EmailRecipient');
+        $ccRecipient = $this->createMock('Oro\Bundle\EmailBundle\Entity\EmailRecipient');
         $ccRecipient->expects($this->any())
             ->method('getType')
             ->will($this->returnValue('cc'));
 
-        $bccRecipient = $this->getMock('Oro\Bundle\EmailBundle\Entity\EmailRecipient');
+        $bccRecipient = $this->createMock('Oro\Bundle\EmailBundle\Entity\EmailRecipient');
         $bccRecipient->expects($this->any())
             ->method('getType')
             ->will($this->returnValue('bcc'));
@@ -86,7 +86,7 @@ class EmailTest extends \PHPUnit_Framework_TestCase
 
     public function testEmailBodyGetterAndSetter()
     {
-        $emailBody = $this->getMock('Oro\Bundle\EmailBundle\Entity\EmailBody');
+        $emailBody = $this->createMock('Oro\Bundle\EmailBundle\Entity\EmailBody');
 
         $entity = new Email();
         $entity->setEmailBody($emailBody);
@@ -170,5 +170,36 @@ class EmailTest extends \PHPUnit_Framework_TestCase
             ['<ref1> <ref2>', ['<ref1>', '<ref2>']],
             ['<ref1> ref2', ['<ref1>']],
         ];
+    }
+
+    public function testSetSubjectOnLongString()
+    {
+        $activityList = new Email();
+        $activityList->setSubject(
+            'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ut sem cursus ligula consectetur iaculis. '
+            . 'Sed ac viverra mi, in auctor tortor. Aliquam id est laoreet, ultricies lectus a, aliquam lectus. Aenean'
+            . ' ac tristique eros. Integer vestibulum volutpat lacus, eu lobortis sapien condimentum in. Pellentesque '
+            . 'a venenatis risus, id placerat nisi. Donec egestas maximus convallis. Cras eleifend leo quis neque '
+            . 'rutrum suscipit. Nulla facilisi. Integer vel enim at tellus ornare condimentum. Nunc rhoncus urna nec '
+            . 'scelerisque elementum. Pellentesque id ante sapien. Phasellus luctus facilisis massa, eu condimentum '
+            . 'justo ultrices at. Curabitur purus diam, aliquet sit amet ante a, aliquet faucibus metus. Nam efficitur'
+            . ' tincidunt urna tincidunt tincidunt. Maecenas et dictum enim. Maecenas pellentesque purus et sapien '
+            . 'vulputate efficitur. Curabitur egestas gravida venenatis. Nullam efficitur nulla eu augue vestibulum, '
+            . 'ut imperdiet nibh pellentesque. Cras ultrices luctus magna vel sodales. Curabituä eget nullam.'
+        );
+
+        self::assertEquals(
+            'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ut sem cursus ligula consectetur iaculis. '
+            . 'Sed ac viverra mi, in auctor tortor. Aliquam id est laoreet, ultricies lectus a, aliquam lectus. Aenean'
+            . ' ac tristique eros. Integer vestibulum volutpat lacus, eu lobortis sapien condimentum in. Pellentesque '
+            . 'a venenatis risus, id placerat nisi. Donec egestas maximus convallis. Cras eleifend leo quis neque '
+            . 'rutrum suscipit. Nulla facilisi. Integer vel enim at tellus ornare condimentum. Nunc rhoncus urna nec '
+            . 'scelerisque elementum. Pellentesque id ante sapien. Phasellus luctus facilisis massa, eu condimentum '
+            . 'justo ultrices at. Curabitur purus diam, aliquet sit amet ante a, aliquet faucibus metus. Nam efficitur'
+            . ' tincidunt urna tincidunt tincidunt. Maecenas et dictum enim. Maecenas pellentesque purus et sapien '
+            . 'vulputate efficitur. Curabitur egestas gravida venenatis. Nullam efficitur nulla eu augue vestibulum, '
+            . 'ut imperdiet nibh pellentesque. Cras ultrices luctus magna vel sodales. Curabituä',
+            $activityList->getSubject()
+        );
     }
 }

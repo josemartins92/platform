@@ -6,17 +6,18 @@ use Doctrine\ORM\EntityManager;
 
 use Symfony\Component\Translation\TranslatorInterface;
 
+use Oro\Bundle\ActivityListBundle\Entity\ActivityList;
+use Oro\Bundle\ActivityListBundle\Model\ActivityListDateProviderInterface;
+use Oro\Bundle\ActivityListBundle\Model\ActivityListGroupProviderInterface;
+use Oro\Bundle\ActivityListBundle\Model\ActivityListProviderInterface;
 use Oro\Bundle\ActivityListBundle\Model\ActivityListUpdatedByProviderInterface;
+use Oro\Bundle\CommentBundle\Model\CommentProviderInterface;
 use Oro\Bundle\ConfigBundle\Config\ConfigManager as Config;
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\EntityBundle\Tools\EntityRoutingHelper;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Config\Id\ConfigIdInterface;
-use Oro\Bundle\ActivityListBundle\Entity\ActivityList;
-use Oro\Bundle\ActivityListBundle\Model\ActivityListProviderInterface;
-use Oro\Bundle\ActivityListBundle\Model\ActivityListDateProviderInterface;
-use Oro\Bundle\ActivityListBundle\Model\ActivityListGroupProviderInterface;
-use Oro\Bundle\CommentBundle\Model\CommentProviderInterface;
+use Oro\Bundle\FeatureToggleBundle\Checker\FeatureToggleableInterface;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
@@ -291,6 +292,10 @@ class ActivityListChainProvider
         foreach ($this->providers as $provider) {
             $hasComment = false;
 
+            if ($provider instanceof FeatureToggleableInterface && !$provider->isFeaturesEnabled()) {
+                continue;
+            }
+
             if ($provider instanceof CommentProviderInterface) {
                 $hasComment = $provider->isCommentsEnabled($provider->getActivityClass());
             }
@@ -429,7 +434,7 @@ class ActivityListChainProvider
             $list->setVerb($verb);
 
             if ($verb === ActivityList::VERB_UPDATE) {
-                $activityListTargets = $list->getActivityListTargetEntities();
+                $activityListTargets = $list->getActivityListTargets();
                 foreach ($activityListTargets as $target) {
                     $list->removeActivityListTarget($target);
                 }

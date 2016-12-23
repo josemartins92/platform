@@ -3,10 +3,13 @@
 namespace Oro\Bundle\ApiBundle\Processor\Subresource;
 
 use Oro\Bundle\ApiBundle\Config\ConfigExtraInterface;
+use Oro\Bundle\ApiBundle\Config\CustomizeLoadedDataConfigExtra;
+use Oro\Bundle\ApiBundle\Config\DataTransformersConfigExtra;
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfigExtra;
 use Oro\Bundle\ApiBundle\Config\FilterFieldsConfigExtra;
 use Oro\Bundle\ApiBundle\Exception\RuntimeException;
+use Oro\Bundle\ApiBundle\Metadata\ActionMetadataExtra;
 use Oro\Bundle\ApiBundle\Metadata\EntityMetadata;
 use Oro\Bundle\ApiBundle\Metadata\MetadataExtraInterface;
 use Oro\Bundle\ApiBundle\Processor\Context;
@@ -244,6 +247,8 @@ class SubresourceContext extends Context
     {
         return [
             new EntityDefinitionConfigExtra(),
+            new CustomizeLoadedDataConfigExtra(),
+            new DataTransformersConfigExtra(),
             new FilterFieldsConfigExtra([$this->getParentClassName() => [$this->getAssociationName()]])
         ];
     }
@@ -360,7 +365,13 @@ class SubresourceContext extends Context
      */
     protected function createParentMetadataExtras()
     {
-        return [];
+        $extras = [];
+        $action = $this->getAction();
+        if ($action) {
+            $extras[] = new ActionMetadataExtra($action);
+        }
+
+        return $extras;
     }
 
     /**

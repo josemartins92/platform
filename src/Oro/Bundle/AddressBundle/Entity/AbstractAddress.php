@@ -2,8 +2,6 @@
 
 namespace Oro\Bundle\AddressBundle\Entity;
 
-use BeSimple\SoapBundle\ServiceDefinition\Annotation as Soap;
-
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -33,7 +31,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @ORM\Column(name="id", type="integer")
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")
-     * @Soap\ComplexType("int", nillable=true)
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
@@ -48,7 +45,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @var string
      *
      * @ORM\Column(name="label", type="string", length=255, nullable=true)
-     * @Soap\ComplexType("string", nillable=true)
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
@@ -64,7 +60,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @var string
      *
      * @ORM\Column(name="street", type="string", length=500, nullable=true)
-     * @Soap\ComplexType("string", nillable=true)
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
@@ -80,7 +75,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @var string
      *
      * @ORM\Column(name="street2", type="string", length=500, nullable=true)
-     * @Soap\ComplexType("string", nillable=true)
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
@@ -96,7 +90,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @var string
      *
      * @ORM\Column(name="city", type="string", length=255, nullable=true)
-     * @Soap\ComplexType("string", nillable=true)
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
@@ -112,7 +105,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @var string
      *
      * @ORM\Column(name="postal_code", type="string", length=255, nullable=true)
-     * @Soap\ComplexType("string", nillable=true)
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
@@ -129,7 +121,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      *
      * @ORM\ManyToOne(targetEntity="Oro\Bundle\AddressBundle\Entity\Country")
      * @ORM\JoinColumn(name="country_code", referencedColumnName="iso2_code")
-     * @Soap\ComplexType("string", nillable=false)
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
@@ -147,7 +138,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      *
      * @ORM\ManyToOne(targetEntity="Oro\Bundle\AddressBundle\Entity\Region")
      * @ORM\JoinColumn(name="region_code", referencedColumnName="combined_code")
-     * @Soap\ComplexType("string", nillable=true)
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
@@ -164,7 +154,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @var string
      *
      * @ORM\Column(name="organization", type="string", length=255, nullable=true)
-     * @Soap\ComplexType("string", nillable=true)
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
@@ -180,7 +169,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @var string
      *
      * @ORM\Column(name="region_text", type="string", length=255, nullable=true)
-     * @Soap\ComplexType("string", nillable=true)
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
@@ -195,7 +183,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @var string
      *
      * @ORM\Column(name="name_prefix", type="string", length=255, nullable=true)
-     * @Soap\ComplexType("string", nillable=true)
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
@@ -211,7 +198,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @var string
      *
      * @ORM\Column(name="first_name", type="string", length=255, nullable=true)
-     * @Soap\ComplexType("string", nillable=true)
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
@@ -227,7 +213,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @var string
      *
      * @ORM\Column(name="middle_name", type="string", length=255, nullable=true)
-     * @Soap\ComplexType("string", nillable=true)
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
@@ -243,7 +228,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @var string
      *
      * @ORM\Column(name="last_name", type="string", length=255, nullable=true)
-     * @Soap\ComplexType("string", nillable=true)
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={
@@ -259,7 +243,6 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * @var string
      *
      * @ORM\Column(name="name_suffix", type="string", length=255, nullable=true)
-     * @Soap\ComplexType("string", nillable=true)
      * @ConfigField(
      *      defaultValues={
      *          "importexport"={

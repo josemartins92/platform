@@ -17,6 +17,8 @@ class Configuration implements ConfigurationInterface
         $rootNode    = $treeBuilder->root('oro_api');
 
         $node = $rootNode->children();
+        $this->appendConfigOptions($node);
+        $this->appendConfigExtensionsNode($node);
         $this->appendActionsNode($node);
         $this->appendFiltersNode($node);
         $this->appendFormTypesNode($node);
@@ -30,6 +32,45 @@ class Configuration implements ConfigurationInterface
     /**
      * @param NodeBuilder $node
      */
+    protected function appendConfigOptions(NodeBuilder $node)
+    {
+        $node
+            ->integerNode('config_max_nesting_level')
+                ->info(
+                    'The maximum number of nesting target entities'
+                    . ' that can be specified in "Resources/config/oro/api.yml"'
+                )
+                ->min(0)
+                ->defaultValue(3)
+            ->end()
+            ->arrayNode('api_doc_views')
+                ->info('All supported ApiDoc views')
+                ->prototype('scalar')->end()
+                ->defaultValue(['default'])
+            ->end()
+            ->scalarNode('documentation_path')
+                ->info('The URL to the API documentation')
+                ->defaultNull()
+            ->end();
+    }
+
+    /**
+     * @param NodeBuilder $node
+     */
+    protected function appendConfigExtensionsNode(NodeBuilder $node)
+    {
+        $node
+            ->arrayNode('config_extensions')
+                ->info('The configuration extensions for "Resources/config/oro/api.yml".')
+                ->example(['oro_api.config_extension.filters', 'oro_api.config_extension.sorters'])
+                ->prototype('scalar')
+                ->end()
+            ->end();
+    }
+
+    /**
+     * @param NodeBuilder $node
+     */
     protected function appendActionsNode(NodeBuilder $node)
     {
         $node
@@ -38,6 +79,7 @@ class Configuration implements ConfigurationInterface
                 ->example(
                     [
                         'get' => [
+                            'processor_service_id' => 'oro_api.get.processor',
                             'processing_groups' => [
                                 'load_data' => [
                                     'priority' => -10
@@ -52,6 +94,10 @@ class Configuration implements ConfigurationInterface
                 ->useAttributeAsKey('name')
                 ->prototype('array')
                     ->children()
+                        ->scalarNode('processor_service_id')
+                            ->info('The service id of the action processor. Set for public actions only.')
+                            ->cannotBeEmpty()
+                        ->end()
                         ->arrayNode('processing_groups')
                             ->info('A list of groups by which child processors can be split')
                             ->useAttributeAsKey('name')
@@ -79,18 +125,49 @@ class Configuration implements ConfigurationInterface
                 ->info('A definition of filters')
                 ->example(
                     [
-                        'string' => [
-                            'class' => 'Oro\Bundle\ApiBundle\Filter\ComparisonFilter',
-                            'supported_operators' => ['=', '!=']
+                        'integer' => [
+                            'supported_operators' => ['=', '!=', '<', '<=', '>', '>=']
+                        ],
+                        'primaryField' => [
+                            'class' => 'Oro\Bundle\ApiBundle\Filter\PrimaryFieldFilter'
+                        ],
+                        'association' => [
+                            'factory' => ['@oro_api.filter_factory.association', 'createFilter']
                         ]
                     ]
                 )
                 ->useAttributeAsKey('name')
                 ->prototype('array')
+                    ->validate()
+                        ->always(function ($value) {
+                            if (empty($value['factory'])) {
+                                unset($value['factory']);
+                                if (empty($value['class'])) {
+                                    $value['class'] = 'Oro\Bundle\ApiBundle\Filter\ComparisonFilter';
+                                }
+                            }
+
+                            return $value;
+                        })
+                    ->end()
+                        ->validate()
+                            ->ifTrue(function ($value) {
+                                return !empty($value['class']) && !empty($value['factory']);
+                            })
+                            ->thenInvalid('The "class" and "factory" should not be used together.')
+                        ->end()
                     ->children()
                         ->scalarNode('class')
                             ->cannotBeEmpty()
-                            ->defaultValue('Oro\Bundle\ApiBundle\Filter\ComparisonFilter')
+                        ->end()
+                        ->arrayNode('factory')
+                            ->validate()
+                                ->ifTrue(function ($value) {
+                                    return count($value) !== 2 || 0 !== strpos($value[0], '@');
+                                })
+                                ->thenInvalid('Expected [\'@serviceId\', \'methodName\']')
+                            ->end()
+                            ->prototype('scalar')->cannotBeEmpty()->end()
                         ->end()
                         ->arrayNode('supported_operators')
                             ->prototype('scalar')->end()

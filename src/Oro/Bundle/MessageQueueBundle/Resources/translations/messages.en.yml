@@ -19,9 +19,9 @@ oro:
                 stoppedAt: Stopped At
 
         menu:
-            label: Job Queue
+            label: Jobs
             shortcut.label: Jobs List
-            shortcut.description: List of jobs
+            shortcut.description: List of Message Queue Jobs
 
         header:
             root_jobs: Jobs List

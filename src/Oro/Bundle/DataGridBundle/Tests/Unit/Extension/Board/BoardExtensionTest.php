@@ -42,7 +42,7 @@ class BoardExtensionTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->translator = $this->getMock('Symfony\Component\Translation\TranslatorInterface');
+        $this->translator = $this->createMock('Symfony\Component\Translation\TranslatorInterface');
 
         $configuration = new Configuration();
 
@@ -83,7 +83,10 @@ class BoardExtensionTest extends \PHPUnit_Framework_TestCase
                 'grid' => [],
                 'board' => [],
                 'chart' => []
-            ]
+            ],
+            'source' => [
+                'type' => 'orm',
+            ],
         ]);
         $this->restrictionManager->expects($this->once())->method('boardViewEnabled')
             ->with($config)
@@ -105,12 +108,15 @@ class BoardExtensionTest extends \PHPUnit_Framework_TestCase
                         Configuration::ACL_RESOURCE_KEY => 'update_acl_resource',
                     ]
                 ]
-            ]
+            ],
+            'source' => [
+                'type' => 'orm',
+            ],
         ]);
         $this->restrictionManager->expects($this->once())->method('boardViewEnabled')->will($this->returnValue(true));
         $this->assertTrue($this->extension->isApplicable($config));
 
-        $processor = $this->getMock('Oro\Bundle\DataGridBundle\Extension\Board\Processor\BoardProcessorInterface');
+        $processor = $this->createMock('Oro\Bundle\DataGridBundle\Extension\Board\Processor\BoardProcessorInterface');
         $processor->expects($this->once())->method('getName')->will($this->returnValue('default'));
         $processor->expects($this->once())->method('getBoardOptions')->will($this->returnValue(['options']));
         $this->extension->addProcessor($processor);
@@ -129,7 +135,7 @@ class BoardExtensionTest extends \PHPUnit_Framework_TestCase
             [
                 'type' => BoardExtension::APPEARANCE_TYPE,
                 'plugin' => Configuration::DEFAULT_PLUGIN,
-                'icon' => 'icon-th',
+                'icon' => 'fa-th',
                 'id' => 'board1',
                 'label' => 'translated board label',
                 'group_by' => 'group_field',
@@ -169,11 +175,14 @@ class BoardExtensionTest extends \PHPUnit_Framework_TestCase
                         Configuration::PROCESSOR_KEY => 'non-default'
                     ]
                 ]
-            ]
+            ],
+            'source' => [
+                'type' => 'orm',
+            ],
         ]);
         $this->restrictionManager->expects($this->once())->method('boardViewEnabled')->will($this->returnValue(true));
         $this->extension->isApplicable($config);
-        $this->setExpectedException('Oro\Bundle\DataGridBundle\Exception\NotFoundBoardProcessorException');
+        $this->expectException('Oro\Bundle\DataGridBundle\Exception\NotFoundBoardProcessorException');
         $data = MetadataObject::create([]);
         $this->extension->visitMetadata($config, $data);
     }
@@ -189,10 +198,13 @@ class BoardExtensionTest extends \PHPUnit_Framework_TestCase
                         ],
                     ]
                 ]
-            ]
+            ],
+            'source' => [
+                'type' => 'orm',
+            ],
         ]);
 
-        $processor = $this->getMock('Oro\Bundle\DataGridBundle\Extension\Board\Processor\BoardProcessorInterface');
+        $processor = $this->createMock('Oro\Bundle\DataGridBundle\Extension\Board\Processor\BoardProcessorInterface');
         $processor->expects($this->once())->method('getName')->will($this->returnValue('default'));
         $options = [
             ['ids' => ['in_progress']],
@@ -210,7 +222,7 @@ class BoardExtensionTest extends \PHPUnit_Framework_TestCase
             ],
             'property' => 'group_field'
         ];
-        $dataSource = $this->getMock('Oro\Bundle\DataGridBundle\Datasource\DatasourceInterface');
+        $dataSource = $this->createMock('Oro\Bundle\DataGridBundle\Datasource\DatasourceInterface');
         $processor->expects($this->once())->method('processDatasource')->with(
             $dataSource,
             $appearanceData,

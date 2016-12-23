@@ -1,0 +1,97 @@
+.oro-toolbar {
+    position: relative;
+
+    display: inline-block;
+    vertical-align: top;
+
+    &__icon {
+        display: inline-block;
+        vertical-align: top;
+
+        margin-left: 3px;
+    }
+
+    &__content {
+        min-width: $oro-toolbar-content-min-width;
+
+        padding: 0 $offset-y-m;
+
+        line-height: ($base-font-size - 0.1) * 2;
+        font-family: $bae-font-minor;
+        text-align: center;
+
+        cursor: pointer;
+    }
+
+    &__dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        left: auto;
+        margin: 0;
+        padding: 10px 15px;
+
+        z-index: 80;
+
+        display: none;
+
+        min-width: $oro-toolbar-toolbar-min-width;
+
+        font-size: $base-font-size;
+
+        background: get-color('additional', 'ultra');
+        border-radius: 4px;
+        box-shadow: 1px 2px 8px rgba(0,0,0,.4);
+    }
+
+    &__list {
+        text-align: left;
+
+        white-space: nowrap;
+
+        @include list-normalize;
+
+
+        &-item {
+            margin-top: 2px;
+
+            &:first-child {
+                margin-top: 0;
+            }
+        }
+    }
+
+    &__link {
+        display: block;
+
+        line-height: 2;
+
+        color: get-color('additional', 'dark');
+
+        &:hover {
+            color: get-color('additional', 'dark');
+        }
+    }
+
+    &__currency,
+    &__text {
+        display: inline-block;
+        vertical-align: baseline;
+    }
+
+    &__currency {
+        margin-right: $offset-y-m / 2;
+    }
+
+    // toolbar open
+    &.active,
+    &.open {
+        .oro-toolbar__content {
+            box-shadow: inset 1px 1px 3px 0 rgba(0,0,0,.3);
+        }
+
+        .oro-toolbar__dropdown {
+            display: block;
+        }
+    }
+}

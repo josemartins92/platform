@@ -6,10 +6,9 @@ define([
     'orotranslation/js/translator',
     'oroui/js/mediator',
     'oroui/js/tools',
-    'oroui/js/error',
     'oroui/js/modal',
     'orodatagrid/js/datagrid/action-launcher'
-], function($, _, Backbone, routing, __, mediator, tools, error, Modal, ActionLauncher) {
+], function($, _, Backbone, routing, __, mediator, tools, Modal, ActionLauncher) {
     'use strict';
 
     var AbstractAction;
@@ -81,12 +80,16 @@ define([
         defaultMessages: {
             confirm_title: 'Execution Confirmation',
             confirm_content: 'Are you sure you want to do this?',
+            confirm_content_params: {},
             confirm_ok: 'Yes, do it',
             confirm_cancel: 'Cancel',
             success: 'Action performed.',
             error: 'Action is not performed.',
             empty_selection: 'Please, select item to perform action.'
         },
+
+        /** @property {Object} */
+        configuration: {},
 
         /**
          * Initialize view
@@ -98,7 +101,12 @@ define([
             if (!options.datagrid) {
                 throw new TypeError('"datagrid" is required');
             }
-            this.order = options.order;
+            if (options.configuration) {
+                this.configuration = $.extend(true, {}, this.configuration, options.configuration);
+            }
+            if (options.order) {
+                this.order = options.order;
+            }
             this.subviews = [];
             this.datagrid = options.datagrid;
             // make own messages property from prototype
@@ -246,7 +254,6 @@ define([
         },
 
         _onAjaxError: function(jqXHR) {
-            error.handle({}, jqXHR, {enforce: true});
             if (this.reloadData) {
                 this.datagrid.hideLoading();
             }
@@ -332,7 +339,7 @@ define([
          * @return {String}
          */
         getConfirmContentMessage: function() {
-            return __(this.messages.confirm_content);
+            return __(this.messages.confirm_content, this.messages.confirm_content_params);
         },
 
         /**

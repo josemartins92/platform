@@ -77,11 +77,11 @@ class DashboardConfigurationFormProviderTest extends FormIntegrationTestCase
      */
     protected function getProviderWithConfigLoaded($configPath)
     {
-        $eventDispatcher = $this->getMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
+        $eventDispatcher = $this->createMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
 
         $config = $this->getConfig($configPath);
         $provider = new WidgetConfigurationFormProvider(
-            new ConfigProvider($config['oro_dashboard_config'], $eventDispatcher),
+            new ConfigProvider($config['dashboards'], $eventDispatcher),
             $this->factory
         );
 

@@ -44,6 +44,9 @@
   .oro-item-collection input[type="text"]{
       width: 240px;
   }
+  .container-fluid:after {
+    clear: none;
+  }
 }
 
 .system-configuration-content {
@@ -54,6 +57,8 @@
     margin-bottom: 15px;
     .accordion-inner {
       padding: 27px 30px 20px;
+      width: 100%;
+      overflow-y: auto;
     }
     .accordion-heading .accordion-toggle {
       color: #727272;
@@ -90,7 +95,7 @@
 
 .system-configuration-search {
   padding: 15px;
-  .icon-search {
+  .fa-search {
     color: #ccc;
   }
   .input-append {
@@ -154,6 +159,7 @@
   }
   .accordion-body .accordion-inner {
     padding: 0;
+    text-transform: capitalize;
   }
   ul > .accordion-group > .accordion-heading a,
   & > li > a,

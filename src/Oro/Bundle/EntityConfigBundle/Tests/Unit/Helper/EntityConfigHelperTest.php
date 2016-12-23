@@ -41,9 +41,9 @@ class EntityConfigHelperTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->config = $this->getMock('Oro\Bundle\EntityConfigBundle\Config\ConfigInterface');
+        $this->config = $this->createMock('Oro\Bundle\EntityConfigBundle\Config\ConfigInterface');
 
-        $this->groupProvider = $this->getMock('Oro\Bundle\SecurityBundle\Acl\Group\AclGroupProviderInterface');
+        $this->groupProvider = $this->createMock('Oro\Bundle\SecurityBundle\Acl\Group\AclGroupProviderInterface');
 
         $this->helper = new EntityConfigHelper($this->configProvider, $this->groupProvider);
     }
@@ -99,6 +99,25 @@ class EntityConfigHelperTest extends \PHPUnit_Framework_TestCase
             ->willReturn($inputData['result']);
 
         $this->assertSame($expectedData, $this->helper->getConfigValue($inputData['class'], $inputData['name']));
+    }
+
+    /**
+     * @param bool $strict
+     *
+     * @dataProvider strictParamProvider
+     */
+    public function testGetConfigValueStrictParam($strict)
+    {
+        $this->configProvider->expects($this->once())
+            ->method('getConfig')
+            ->with('stdClass')
+            ->willThrowException(new \RuntimeException('test exception'));
+
+        if ($strict) {
+            $this->expectException('RuntimeException', 'test exception');
+        }
+
+        $this->assertNull($this->helper->getConfigValue('stdClass', 'param', $strict));
     }
 
     /**
@@ -171,6 +190,17 @@ class EntityConfigHelperTest extends \PHPUnit_Framework_TestCase
                 ],
                 'expected' => 'value1',
             ],
+        ];
+    }
+
+    /**
+     * @return array
+     */
+    public function strictParamProvider()
+    {
+        return [
+            [true],
+            [false]
         ];
     }
 

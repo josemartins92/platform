@@ -3,9 +3,11 @@
 namespace Oro\Bundle\UserBundle\Entity\Repository;
 
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\QueryBuilder;
 
 use Oro\Bundle\EmailBundle\Entity\EmailOrigin;
 use Oro\Bundle\EmailBundle\Entity\Repository\EmailAwareRepository;
+use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\UserBundle\Entity\User;
 
 class UserRepository extends EntityRepository implements EmailAwareRepository
@@ -70,7 +72,10 @@ class UserRepository extends EntityRepository implements EmailAwareRepository
         if ($excludedEmailNames) {
             $qb
                 ->andWhere($qb->expr()->notIn(
-                    sprintf('TRIM(CONCAT(%s, \' <\', u.email, \'>|\', o.name))', $fullNameQueryPart),
+                    sprintf(
+                        'TRIM(CONCAT(\'"\', %s, \'" <\', CAST(u.email AS string), \'>|\', CAST(o.name AS string)))',
+                        $fullNameQueryPart
+                    ),
                     ':excluded_emails'
                 ))
                 ->setParameter('excluded_emails', array_values($excludedEmailNames));
@@ -106,7 +111,10 @@ class UserRepository extends EntityRepository implements EmailAwareRepository
         if ($excludedEmailNames) {
             $qb
                 ->andWhere($qb->expr()->notIn(
-                    sprintf('TRIM(CONCAT(%s, \' <\', e.email, \'>|\', o.name))', $fullNameQueryPart),
+                    sprintf(
+                        'TRIM(CONCAT(\'"\', %s, \'" <\', CAST(e.email AS string), \'>|\', CAST(o.name AS string)))',
+                        $fullNameQueryPart
+                    ),
                     ':excluded_emails'
                 ))
                 ->setParameter('excluded_emails', array_values($excludedEmailNames));
@@ -147,27 +155,49 @@ class UserRepository extends EntityRepository implements EmailAwareRepository
 
     /**
      * @param string[] $emails
+     * @param Organization|null $organization
      *
      * @return User[]
      */
-    public function findUsersByEmails(array $emails)
+    public function findUsersByEmailsAndOrganization(array $emails, Organization $organization = null)
     {
         if (!$emails) {
             return [];
         }
 
-        $lowerEmails = array_map('strtolower', $emails);
+        $lowerCaseEmails = array_map('strtolower', $emails);
 
-        $qb = $this->createQueryBuilder('u');
+        $queryBuilder = $this->createQueryBuilder('user');
 
-        return $qb
+        $queryBuilder
+            ->select('user')
+            ->leftJoin('user.emails', 'email')
+            ->where($queryBuilder->expr()->orX(
+                $queryBuilder->expr()->in('LOWER(email.email)', $lowerCaseEmails),
+                $queryBuilder->expr()->in('LOWER(user.email)', $lowerCaseEmails)
+            ));
+
+        if ($organization) {
+            $queryBuilder->innerJoin('user.organizations', 'organization')
+                ->andWhere('organization = :organization')
+                ->setParameter('organization', $organization);
+        }
+
+        $query = $queryBuilder->getQuery();
+
+        return $query->getResult();
+    }
+
+    /**
+     * Return query builder matching enabled users
+     *
+     * @return QueryBuilder
+     */
+    public function findEnabledUsersQB()
+    {
+        return $this->createQueryBuilder('u')
             ->select('u')
-            ->leftJoin('u.emails', 'e')
-            ->where($qb->expr()->orX(
-                $qb->expr()->in('LOWER(e.email)', $lowerEmails),
-                $qb->expr()->in('LOWER(u.email)', $lowerEmails)
-            ))
-            ->getQuery()
-            ->getResult();
+            ->andWhere('u.enabled = :enabled')
+            ->setParameter('enabled', true);
     }
 }

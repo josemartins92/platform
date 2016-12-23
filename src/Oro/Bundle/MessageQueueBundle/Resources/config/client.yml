@@ -92,6 +92,7 @@ services:
             - '@oro_message_queue.client.queue_consumer'
             - '@oro_message_queue.client.delegate_message_processor'
             - '@oro_message_queue.client.meta.destination_meta_registry'
+            - '@logger'
         tags:
             - { name: 'console.command' }
 
@@ -123,7 +124,4 @@ services:
         public: false
         arguments: ['@oro_message_queue.message_producer']
         tags:
-            -
-              name: 'data_collector'
-              template: 'OroMessageQueueBundle:Profiler:panel.html.twig'
-              id: 'oro.message_queue'
+            - { name: data_collector, template: 'OroMessageQueueBundle:Collector:message_queue.html.twig', id: message_queue }

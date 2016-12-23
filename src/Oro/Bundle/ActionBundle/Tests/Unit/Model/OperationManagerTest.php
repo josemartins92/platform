@@ -10,6 +10,7 @@ use Oro\Bundle\ActionBundle\Model\ActionData;
 use Oro\Bundle\ActionBundle\Model\ActionGroupRegistry;
 use Oro\Bundle\ActionBundle\Model\Assembler\AttributeAssembler;
 use Oro\Bundle\ActionBundle\Model\Assembler\FormOptionsAssembler;
+use Oro\Bundle\ActionBundle\Model\Criteria\OperationFindCriteria;
 use Oro\Bundle\ActionBundle\Model\Operation;
 use Oro\Bundle\ActionBundle\Model\OperationDefinition;
 use Oro\Bundle\ActionBundle\Model\OperationManager;
@@ -110,7 +111,7 @@ class OperationManagerTest extends \PHPUnit_Framework_TestCase
      * @param array $operations
      * @param array $expected
      */
-    public function testgetOperations(
+    public function testGetOperations(
         $class,
         $route,
         $datagrid,
@@ -123,7 +124,7 @@ class OperationManagerTest extends \PHPUnit_Framework_TestCase
 
         $this->operationRegistry->expects($this->once())
             ->method('find')
-            ->with($class, $route, $datagrid, $group)
+            ->with(new OperationFindCriteria($class, $route, $datagrid, $group))
             ->willReturn($operations);
 
         $this->assertGetOperations($expected, $context);
@@ -175,6 +176,18 @@ class OperationManagerTest extends \PHPUnit_Framework_TestCase
                 'datagrid' => null,
                 'group' => null,
                 'context' => ['entityClass' => 'Oro\Bundle\ActionBundle\Tests\Unit\Stub\TestEntity1'],
+                'operations' => [],
+                'expectedOperations' => []
+            ],
+            'entity1 without id with datagrid' => [
+                'entityClass' => 'Oro\Bundle\ActionBundle\Tests\Unit\Stub\TestEntity1',
+                'route' => null,
+                'datagrid' => 'grid1',
+                'group' => null,
+                'context' => [
+                    'entityClass' => 'Oro\Bundle\ActionBundle\Tests\Unit\Stub\TestEntity1',
+                    'datagrid' => 'grid1'
+                ],
                 'operations' => [],
                 'expectedOperations' => []
             ],
@@ -254,10 +267,8 @@ class OperationManagerTest extends \PHPUnit_Framework_TestCase
     public function testGetOperation($operationName, $operation, $isAvailable)
     {
         if (!$operation || !$isAvailable) {
-            $this->setExpectedException(
-                '\Oro\Bundle\ActionBundle\Exception\OperationNotFoundException',
-                sprintf('Operation with name "%s" not found', $operationName)
-            );
+            $this->expectException('\Oro\Bundle\ActionBundle\Exception\OperationNotFoundException');
+            $this->expectExceptionMessage(sprintf('Operation with name "%s" not found', $operationName));
         }
 
         $this->operationRegistry->expects($this->once())
@@ -533,7 +544,7 @@ class OperationManagerTest extends \PHPUnit_Framework_TestCase
     {
         $operations = [
             'operation1' => $this->getOperation('operation1', 50, ['show_dialog' => false]),
-            'operation2' => $this->getOperation('operation2', 40, ['show_dialog' => true], [], ['route1']),
+            'operation2' => $this->getOperation('operation2', 40, ['show_dialog' => true]),
             'operation3' => $this->getOperation(
                 'operation3',
                 30,
@@ -543,44 +554,23 @@ class OperationManagerTest extends \PHPUnit_Framework_TestCase
             'operation4' => $this->getOperation(
                 'operation4',
                 20,
-                ['template' => 'test.html.twig', 'show_dialog' => true],
-                [
-                    'Oro\Bundle\ActionBundle\Tests\Unit\Stub\TestEntity1',
-                    'Oro\Bundle\ActionBundle\Tests\Unit\Stub\TestEntity2'
-                ],
-                ['route1', 'route2']
+                ['template' => 'test.html.twig', 'show_dialog' => true]
             ),
             'operation5' => $this->getOperation(
                 'operation5',
                 10,
                 ['show_dialog' => true],
-                [
-                    'Oro\Bundle\ActionBundle\Tests\Unit\Stub\TestEntity1',
-                    'Oro\Bundle\ActionBundle\Tests\Unit\Stub\TestEntity2',
-                    'Oro\Bundle\ActionBundle\Tests\Unit\Stub\TestEntity3'
-                ],
-                ['route2', 'route3'],
-                [],
-                [],
                 false
             ),
             'operation6' => $this->getOperation(
                 'operation6',
                 50,
-                ['show_dialog' => true],
-                ['Oro\Bundle\ActionBundle\Tests\Unit\Stub\TestEntity1'],
-                ['route2', 'route3']
+                ['show_dialog' => true]
             ),
             'operation7' => $this->getOperation(
                 'operation7',
                 50,
-                ['show_dialog' => true],
-                [
-                    'Oro\Bundle\ActionBundle\Tests\Unit\Stub\TestEntity1',
-                    'Oro\Bundle\ActionBundle\Tests\Unit\Stub\TestEntity2',
-                    'Oro\Bundle\ActionBundle\Tests\Unit\Stub\TestEntity3'
-                ],
-                ['route1', 'route2', 'route3']
+                ['show_dialog' => true]
             )
         ];
 
@@ -591,39 +581,21 @@ class OperationManagerTest extends \PHPUnit_Framework_TestCase
      * @param string $name
      * @param int $order
      * @param array $frontendOptions
-     * @param array $entities
-     * @param array $routes
-     * @param array $datagrids
-     * @param array $group
      * @param bool $enabled
      * @return Operation
      */
-    protected function getOperation(
-        $name,
-        $order = 10,
-        array $frontendOptions = [],
-        array $entities = [],
-        array $routes = [],
-        array $datagrids = [],
-        array $group = [],
-        $enabled = true
-    ) {
+    protected function getOperation($name, $order = 10, array $frontendOptions = [], $enabled = true)
+    {
         $definition = new OperationDefinition();
         $definition
             ->setName($name)
             ->setLabel('Label ' . $name)
             ->setEnabled($enabled)
             ->setOrder($order)
-            ->setRoutes($routes)
-            ->setEntities($entities)
-            ->setDatagrids($datagrids)
-            ->setGroups($group)
             ->setFrontendOptions($frontendOptions);
 
         /* @var $actionFactory \PHPUnit_Framework_MockObject_MockObject|ActionFactory */
-        $actionFactory = $this->getMockBuilder('Oro\Component\Action\Action\ActionFactory')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $actionFactory = $this->createMock('Oro\Component\Action\Action\ActionFactoryInterface');
 
         /* @var $conditionFactory \PHPUnit_Framework_MockObject_MockObject|ExpressionFactory */
         $conditionFactory = $this->getMockBuilder('Oro\Component\ConfigExpression\ExpressionFactory')

@@ -1,6 +1,10 @@
-define(['numeral', '../locale-settings', 'underscore'
-    ], function(numeral, localeSettings, _) {
+define(function(require) {
     'use strict';
+
+    var _ = require('underscore');
+    var numeral = require('numeral');
+    var localeSettings = require('../locale-settings');
+    var configuration = require('oroconfig/js/configuration');
 
     /**
      * Number Formatter
@@ -73,10 +77,16 @@ define(['numeral', '../locale-settings', 'underscore'
                 return formattedNumber.replace('%', '');
             },
             replaceCurrency: function(formattedNumber, options) {
-                return formattedNumber.replace(
-                    options.currency_symbol,
-                    localeSettings.getCurrencySymbol(options.currency_code)
-                );
+                var currencyLayout = configuration.get('currency-view-type') === 'symbol' ?
+                    localeSettings.getCurrencySymbol(options.currency_code) : options.currency_code;
+
+                var isPrepend = configuration.get('is-currency-symbol-prepend');
+
+                if (configuration.get('currency-view-type') !== 'symbol' && isPrepend) {
+                    currencyLayout += '\u00A0';
+                }
+
+                return formattedNumber.replace(options.currency_symbol, currencyLayout);
             }
         };
 
@@ -89,9 +99,38 @@ define(['numeral', '../locale-settings', 'underscore'
             return result;
         };
 
+        var allowedCustomOptions = [
+            'min_fraction_digits',
+            'max_fraction_digits'
+        ];
+
+        var prepareCustomOptions = function(opts) {
+            if (!_.isObject(opts)) {
+                return {};
+            }
+
+            return _.pick(opts, allowedCustomOptions);
+        };
+
         return {
-            formatDecimal: function(value) {
-                var options = localeSettings.getNumberFormats('decimal');
+            formatDecimal: function(value, opts) {
+                var customOptions = prepareCustomOptions(opts);
+                var formatOptions = this.formatOptions || {};
+                var decimalOptions = localeSettings.getNumberFormats('decimal');
+                var options = _.extend({}, decimalOptions, formatOptions, customOptions);
+                options.style = 'decimal';
+                var formattersChain = [
+                    formatters.numeralFormat,
+                    formatters.addPrefixSuffix
+                ];
+                return doFormat(value, options, formattersChain);
+            },
+            formatMonetary: function(value, opts) {
+                var customOptions = prepareCustomOptions(opts);
+                var decimalOptions = localeSettings.getNumberFormats('decimal');
+                var fractionDigitsOptions = _.pick(localeSettings.getNumberFormats('currency'),
+                    ['max_fraction_digits', 'min_fraction_digits']);
+                var options = _.extend({}, decimalOptions, fractionDigitsOptions, customOptions);
                 options.style = 'decimal';
                 var formattersChain = [
                     formatters.numeralFormat,
@@ -120,11 +159,13 @@ define(['numeral', '../locale-settings', 'underscore'
                 ];
                 return doFormat(value, options, formattersChain);
             },
-            formatCurrency: function(value, currency) {
-                var options = localeSettings.getNumberFormats('currency');
+            formatCurrency: function(value, currency, opts) {
+                var customOptions = prepareCustomOptions(opts);
+                var currencyOptions = localeSettings.getNumberFormats('currency');
                 if (!currency) {
                     currency = localeSettings.getCurrency();
                 }
+                var options = _.extend({}, currencyOptions, customOptions);
                 options.style = 'currency';
                 options.currency_code = currency;
                 var formattersChain = [
@@ -179,6 +220,12 @@ define(['numeral', '../locale-settings', 'underscore'
                 numeral.language(originLanguage);
 
                 return result;
+            },
+            unformatStrict: function(value) {
+                var numberFormats = localeSettings.getNumberFormats('decimal');
+                value = String(value).split(numberFormats.grouping_separator_symbol).join('');
+                value = value.replace(numberFormats.decimal_separator_symbol, '.');
+                return Number(value);
             }
         };
     };

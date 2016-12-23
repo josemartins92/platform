@@ -24,7 +24,7 @@ class FileTypeTest extends \PHPUnit_Framework_TestCase
     {
         $event = new TestSubscriber();
         $this->type->setEventSubscriber($event);
-        $builder = $this->getMock('Symfony\Component\Form\Test\FormBuilderInterface');
+        $builder = $this->createMock('Symfony\Component\Form\Test\FormBuilderInterface');
         $builder->expects($this->once())
             ->method('addEventSubscriber')
             ->with($event);
@@ -33,20 +33,39 @@ class FileTypeTest extends \PHPUnit_Framework_TestCase
             ->method('add')
             ->with('file', 'file');
 
-        $options = ['checkEmptyFile' => true];
+        $options = [
+            'checkEmptyFile' => true,
+            'addEventSubscriber' => true
+        ];
+        $this->type->buildForm($builder, $options);
+    }
+
+    public function testBuildFormWithoutEventSubscriber()
+    {
+        $builder = $this->createMock('Symfony\Component\Form\Test\FormBuilderInterface');
+
+        $builder->expects($this->once())
+            ->method('add')
+            ->with('file', 'file');
+
+        $options = [
+            'checkEmptyFile' => true,
+            'addEventSubscriber' => false
+        ];
         $this->type->buildForm($builder, $options);
     }
 
     public function testSetDefaultOptions()
     {
-        $resolver = $this->getMock('Symfony\Component\OptionsResolver\OptionsResolverInterface');
+        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolverInterface');
         $resolver->expects($this->once())
             ->method('setDefaults')
             ->with(
                 [
                     'data_class' => 'Oro\Bundle\AttachmentBundle\Entity\File',
                     'checkEmptyFile' => false,
-                    'allowDelete' => true
+                    'allowDelete' => true,
+                    'addEventSubscriber' => true
                 ]
             );
 

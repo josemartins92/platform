@@ -2,6 +2,8 @@
 
 namespace Oro\Bundle\LayoutBundle\Tests\Unit\Twig;
 
+use Symfony\Component\Form\FormView;
+
 use Oro\Component\Layout\BlockView;
 use Oro\Component\Layout\Templating\TextHelper;
 
@@ -21,7 +23,7 @@ class LayoutExtensionTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->renderer   = $this->getMock('Oro\Bundle\LayoutBundle\Form\TwigRendererInterface');
+        $this->renderer   = $this->createMock('Oro\Bundle\LayoutBundle\Form\TwigRendererInterface');
         $this->textHelper = $this->getMockBuilder('Oro\Component\Layout\Templating\TextHelper')
             ->disableOriginalConstructor()
             ->getMock();
@@ -63,7 +65,7 @@ class LayoutExtensionTest extends \PHPUnit_Framework_TestCase
     {
         $functions = $this->extension->getFunctions();
 
-        $this->assertCount(5, $functions);
+        $this->assertCount(6, $functions);
 
         /** @var \Twig_SimpleFunction $function */
         $this->assertInstanceOf('Twig_SimpleFunction', $functions[0]);
@@ -87,6 +89,10 @@ class LayoutExtensionTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('layout_attr_defaults', $function->getName());
         $this->assertNotNull($function->getCallable());
         $this->assertEquals([$this->extension, 'defaultAttributes'], $function->getCallable());
+        $function = $functions[5];
+        $this->assertEquals('set_class_prefix_to_form', $function->getName());
+        $this->assertNotNull($function->getCallable());
+        $this->assertEquals([$this->extension, 'setClassPrefixToForm'], $function->getCallable());
     }
 
     public function testGetFilters()
@@ -232,5 +238,22 @@ class LayoutExtensionTest extends \PHPUnit_Framework_TestCase
                 ],
             ],
         ];
+    }
+
+    public function testSetClassPrefixToForm()
+    {
+        $prototypeView = $this->createMock(FormView::class);
+
+        $childView = $this->createMock(FormView::class);
+        $childView->vars['prototype'] = $prototypeView;
+
+        $formView = $this->createMock(FormView::class);
+        $formView->children = [$childView];
+
+        $this->extension->setClassPrefixToForm($formView, 'foo');
+
+        $this->assertEquals($formView->vars['class_prefix'], 'foo');
+        $this->assertEquals($childView->vars['class_prefix'], 'foo');
+        $this->assertEquals($prototypeView->vars['class_prefix'], 'foo');
     }
 }

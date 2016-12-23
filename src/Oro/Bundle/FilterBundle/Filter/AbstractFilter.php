@@ -97,18 +97,21 @@ abstract class AbstractFilter implements FilterInterface
         }
 
         if ($relatedJoin) {
+            /** @var OrmFilterDatasourceAdapter $ds */
             $qb = $ds->getQueryBuilder();
 
             $fieldsExprs = $this->createConditionFieldExprs($qb);
             $subExprs = [];
+            $groupBy = implode(', ', $this->getSelectFieldFromGroupBy($qb));
+
             foreach ($fieldsExprs as $fieldExpr) {
                 $subQb = clone $qb;
                 $subQb
-                    ->resetDqlPart('orderBy')
+                    ->resetDQLPart('orderBy')
+                    ->resetDQLPart('where')
                     ->select($fieldExpr)
                     ->andWhere($comparisonExpr)
                     ->andWhere(sprintf('%1$s = %1$s', $fieldExpr));
-                $groupBy = implode(', ', $this->getSelectFieldFromGroupBy($qb));
                 if ($groupBy) {
                     // replace aliases from SELECT by expressions, since SELECT clause is changed
                     $subQb->groupBy($groupBy);
@@ -394,7 +397,7 @@ abstract class AbstractFilter implements FilterInterface
      */
     protected function findRelatedJoin(FilterDatasourceAdapterInterface $ds)
     {
-        if (!$ds instanceof OrmFilterDatasourceAdapter) {
+        if (!$ds instanceof OrmFilterDatasourceAdapter || $this->isToOne($ds)) {
             return null;
         }
 
@@ -471,5 +474,22 @@ abstract class AbstractFilter implements FilterInterface
         }
 
         return $expressions;
+    }
+
+    /**
+     * @param FilterDatasourceAdapterInterface $ds
+     *
+     * @return bool
+     */
+    protected function isToOne(FilterDatasourceAdapterInterface $ds)
+    {
+        if (!$ds instanceof OrmFilterDatasourceAdapter) {
+            return false;
+        }
+
+        $fieldName = $this->get(FilterUtility::DATA_NAME_KEY);
+        list($joinAlias) = explode('.', $fieldName);
+
+        return QueryUtils::isToOne($ds->getQueryBuilder(), $joinAlias);
     }
 }

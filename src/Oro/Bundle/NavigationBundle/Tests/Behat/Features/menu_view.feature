@@ -4,11 +4,11 @@ Feature: Change menu view
   I want to change menu view from configuration and navigate to menu
 
 Scenario: Try navigate on top menu
-  Given I login as "admin" user with "admin" password
+  Given I login as administrator
   And menu is at the top
   And I go to System/User Management/Users
   When click view John Doe in grid
-  And username field should have admin value
+  And username field should has admin value
 
 Scenario: Change menu view
   Given I go to System/Configuration
@@ -21,4 +21,4 @@ Scenario: Change menu view
 Scenario: Try to navigate on left menu
   Given I go to System/User Management/Users
   When click view John Doe in grid
-  Then username field should have admin value
+  Then username field should has admin value

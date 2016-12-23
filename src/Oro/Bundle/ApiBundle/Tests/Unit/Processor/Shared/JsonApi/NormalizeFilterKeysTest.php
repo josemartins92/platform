@@ -72,15 +72,27 @@ class NormalizeFilterKeysTest extends GetListProcessorOrmRelatedTestCase
             [
                 'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\User',
                 [
-                    'id'   => ['expectedKey' => 'filter[id]', 'expectedDescription' => 'The identifier of an entity'],
-                    'name' => ['expectedKey' => 'filter[name]', 'expectedDescription' => null]
+                    'id'   => [
+                        'expectedKey' => 'filter[id]',
+                        'expectedDescription' => NormalizeFilterKeys::ID_FILTER_DESCRIPTION
+                    ],
+                    'name' => [
+                        'expectedKey' => 'filter[name]',
+                        'expectedDescription' => null
+                    ]
                 ]
             ],
             [
                 'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Category',
                 [
-                    'name'  => ['expectedKey' => 'filter[id]', 'expectedDescription' => 'The identifier of an entity'],
-                    'label' => ['expectedKey' => 'filter[label]', 'expectedDescription' => null],
+                    'name'  => [
+                        'expectedKey' => 'filter[id]',
+                        'expectedDescription' => NormalizeFilterKeys::ID_FILTER_DESCRIPTION
+                    ],
+                    'label' => [
+                        'expectedKey' => 'filter[label]',
+                        'expectedDescription' => null
+                    ],
                 ]
             ],
         ];

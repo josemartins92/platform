@@ -7,6 +7,7 @@ use Doctrine\DBAL\Schema\SchemaException;
 
 use Oro\Bundle\AttachmentBundle\Migration\Extension\AttachmentExtension;
 use Oro\Bundle\AttachmentBundle\Migration\Extension\AttachmentExtensionAwareInterface;
+use Oro\Bundle\AttachmentBundle\Migration\Extension\AttachmentExtensionAwareTrait;
 use Oro\Bundle\CommentBundle\Migration\Extension\CommentExtension;
 use Oro\Bundle\CommentBundle\Migration\Extension\CommentExtensionAwareInterface;
 use Oro\Bundle\MigrationBundle\Migration\Migration;
@@ -14,11 +15,10 @@ use Oro\Bundle\MigrationBundle\Migration\QueryBag;
 
 class OroCommentBundle implements Migration, CommentExtensionAwareInterface, AttachmentExtensionAwareInterface
 {
+    use AttachmentExtensionAwareTrait;
+
     /** @var CommentExtension */
     protected $comment;
-
-    /** @var AttachmentExtension */
-    protected $attachmentExtension;
 
     /**
      * @param CommentExtension $commentExtension
@@ -31,19 +31,10 @@ class OroCommentBundle implements Migration, CommentExtensionAwareInterface, Att
     /**
      * {@inheritdoc}
      */
-    public function setAttachmentExtension(AttachmentExtension $attachmentExtension)
-    {
-        $this->attachmentExtension = $attachmentExtension;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function up(Schema $schema, QueryBag $queries)
     {
         self::createCommentTable($schema);
         self::addCommentToEmail($schema, $this->comment);
-        self::addCommentToCalendarEvent($schema, $this->comment);
         self::addCommentToNote($schema, $this->comment);
         self::addAttachment($schema, $this->attachmentExtension);
     }
@@ -96,15 +87,6 @@ class OroCommentBundle implements Migration, CommentExtensionAwareInterface, Att
     public static function addCommentToEmail(Schema $schema, CommentExtension $commentExtension)
     {
         $commentExtension->addCommentAssociation($schema, 'oro_email');
-    }
-
-    /**
-     * @param Schema           $schema
-     * @param CommentExtension $commentExtension
-     */
-    public static function addCommentToCalendarEvent(Schema $schema, CommentExtension $commentExtension)
-    {
-        $commentExtension->addCommentAssociation($schema, 'oro_calendar_event');
     }
 
     /**

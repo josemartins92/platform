@@ -12,8 +12,8 @@ Table of content
 
 ##Overview
 Datagrid is table oriented representation of some data from some datasource.
- It's configuration is declarative YAML based file, that should be placed in `Resources/config` folder of your bundle and named `datagrid.yml`.
-  This file should contain root node `datagrid` and each grid configuration should be placed under it.
+ It's configuration is declarative YAML based file, that should be placed in `Resources/config/oro` folder of your bundle and named `datagrids.yml`.
+  This file should contain root node `datagrids` and each grid configuration should be placed under it.
 
 ##Getting Started
 ####Configuration file
@@ -21,7 +21,7 @@ First of all to define own datagrid you should create configuration file as desc
 After that, you have to choose identifier of yours future grid and declare it by adding associative array with identifier as key.
 e.g.
 ``` yaml
-datagrid:
+datagrids:
     acme-demo-datagrid:     # grid identifier
         ...                 # configuration will be here
 ``` 
@@ -31,7 +31,7 @@ When it's done, next step is to configure datasource, basically it's similar arr
 You have to choose datasource type and properly configure  depending on it. For further details [see](./datasources.md).
 e.g.
 ``` yaml
-datagrid:
+datagrids:
     acme-demo-datagrid:
         source:
             type: orm  # datasource type
@@ -39,12 +39,49 @@ datagrid:
                 ....   # some query configuration
 ```
 
+#####Datasource as service
+Other than the `query` yaml-oriented provider, ORM datasource supports an alternative `query_builder` service-oriented provider. 
+Basically it is possible to use any arbitrary method that returns a valid `Doctrine\ORM\QueryBuilder` instance.
+
+``` php
+// @acme_demo.user.repository
+public class UserRepository 
+{
+    // ....
+
+    /**
+    * @return Doctrine\ORM\QueryBuilder
+    */
+    public function getUsersQb()
+    {
+        return $this->em->createQueryBuilder()
+            ->from('AcmeDemoBundle:User', 'u')
+            ->select('u')
+            // ->where(...)
+            // ->join(...)
+            // ->orderBy(...)
+        ;
+    }
+}
+
+``` 
+
+In the datagrid configuration just provide the service and method name:
+
+``` yaml
+datagrids:
+    acme-demo-datagrid:
+        source:
+            type: orm  # datasource type
+            query_builder: "@acme_demo.user.repository->getUsersQb"
+```
+
 #####Parameters binding
 
 If datasource supports parameters binding, additional option "bind_parameters" can be specified. For example
 
 ``` yaml
-datagrid:
+datagrids:
     acme-demo-datagrid:
         source:
             type: orm
@@ -59,6 +96,9 @@ datagrid:
             bind_parameters:
                 group_id: groupId
 ```
+
+Parameters binding is also supported while using the `query_builder` notation for the ORM data source. 
+Each binding will call `->setParameter('group_id', group_id)` automatically upon the provided builder. 
 
 [More about parameters binding](./parameter_binding.md).
 
@@ -85,12 +125,13 @@ Configuration format is different depending on column type, but there are list o
 - `order` - number of column's position, allows to change columns order over [Column Manager](../frontend/column_manager.md) and save it in [Grid View](./extensions/grid_views.md) (by default is not defined and columns are rendered in order they are declared in configuration)
 - `required` - if it is `true` the column can not be hidden over [Column Manager](../frontend/column_manager.md) (by default is not defined)
 - `manageable` - if it is `true` the column does not appear in [Column Manager](../frontend/column_manager.md) (by default is not defined)
+- `shortenableLabel` - could column label be abbreviated or shortened with ellipsis (`true` - by default)
 
 For detailed explanation [see](./extensions/formatter.md).
 
 So lets define few columns:
 ``` yaml
-datagrid:
+datagrids:
     acme-demo-datagrid:
         source:
             type: orm
@@ -118,7 +159,7 @@ Basically it's array of column names where value is sorter configuration.
 
 Lets make all columns sortable:
 ``` yaml
-datagrid:
+datagrids:
     acme-demo-datagrid:
         ...                                 # definition from previous examples
         sorters:

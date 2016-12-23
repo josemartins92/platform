@@ -64,17 +64,25 @@ class ValidateSorting implements ProcessorInterface
 
         $unsupportedFields = $this->validateSortValues($sortFilterValue, $context);
         if (!empty($unsupportedFields)) {
-            $error = Error::createValidationError(
-                Constraint::SORT,
-                sprintf(
-                    'Sorting by "%s" field%s not supported.',
-                    implode(', ', $unsupportedFields),
-                    count($unsupportedFields) === 1 ? ' is' : 's are'
-                )
+            $context->addError(
+                Error::createValidationError(Constraint::SORT, $this->getValidationErrorMessage($unsupportedFields))
+                    ->setSource(ErrorSource::createByParameter($sortFilterValue->getSourceKey() ?: $sortFilterKey))
             );
-            $error->setSource(ErrorSource::createByParameter($sortFilterKey));
-            $context->addError($error);
         }
+    }
+
+    /**
+     * @param string[] $unsupportedFields
+     *
+     * @return string
+     */
+    protected function getValidationErrorMessage(array $unsupportedFields)
+    {
+        return sprintf(
+            'Sorting by "%s" field%s not supported.',
+            implode(', ', $unsupportedFields),
+            count($unsupportedFields) === 1 ? ' is' : 's are'
+        );
     }
 
     /**
@@ -159,7 +167,7 @@ class ValidateSorting implements ProcessorInterface
             return null;
         }
 
-        return $sorter->getPropertyPath() ?: $fieldName;
+        return $sorter->getPropertyPath($fieldName);
     }
 
     /**
@@ -208,7 +216,7 @@ class ValidateSorting implements ProcessorInterface
                 return [null, null];
             }
 
-            $associationName = $config->getField($fieldName)->getPropertyPath() ?: $fieldName;
+            $associationName = $config->getField($fieldName)->getPropertyPath($fieldName);
             if (!$metadata->hasAssociation($associationName)) {
                 return [null, null];
             }

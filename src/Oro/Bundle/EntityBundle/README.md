@@ -11,3 +11,5 @@ This bundle provides the following functionality:
 - [Resolving of ORM query hints](./Resources/doc/query_hint_resolver.md)
 - [REST API for dictionaries](./Resources/doc/dictionaries_api.md)
 - [Profiler of duplicated queries](./Resources/doc/profiler_duplicated_queries.md)
+- [Entity fallback values](./Resources/doc/entity_fallback.md)
+- [Entity repositories as a services](./Resources/doc/repositories_as_a_services.md)

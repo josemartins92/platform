@@ -2,11 +2,14 @@
 
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Provider;
 
+use Oro\Bundle\EmailBundle\Entity\EmailUser;
 use Oro\Bundle\EmailBundle\Provider\EmailActivityListProvider;
 use Oro\Bundle\EmailBundle\Tools\EmailBodyHelper;
+use Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker;
+use Oro\Bundle\FeatureToggleBundle\Checker\FeatureCheckerHolderTrait;
+use Oro\Bundle\FeatureToggleBundle\Checker\FeatureToggleableInterface;
 use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\UserBundle\Entity\User;
-use Oro\Bundle\EmailBundle\Entity\EmailUser;
 
 class EmailActivityListProviderTest extends \PHPUnit_Framework_TestCase
 {
@@ -35,6 +38,9 @@ class EmailActivityListProviderTest extends \PHPUnit_Framework_TestCase
 
     /** @var \PHPUnit_Framework_MockObject_MockObject */
     protected $commentAssociationHelper;
+
+    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    protected $featureChecker;
 
     protected function setUp()
     {
@@ -82,6 +88,10 @@ class EmailActivityListProviderTest extends \PHPUnit_Framework_TestCase
             ->getMockBuilder('Oro\Bundle\CommentBundle\Tools\CommentAssociationHelper')
             ->disableOriginalConstructor()
             ->getMock();
+        $this->featureChecker = $this->getMockBuilder(FeatureChecker::class)
+            ->setMethods(['isFeatureEnabled'])
+            ->disableOriginalConstructor()
+            ->getMock();
 
         $this->emailActivityListProvider = new EmailActivityListProvider(
             $this->doctrineHelper,
@@ -113,11 +123,12 @@ class EmailActivityListProviderTest extends \PHPUnit_Framework_TestCase
 
         $emailMock = $this->getMockBuilder('Oro\Bundle\EmailBundle\Entity\EmailUser')
             ->setMethods(
-                ['getFromEmailAddress',
+                [
+                    'getFromEmailAddress',
                     'hasOwner',
                     'getOwner',
                     'getOrganization',
-                    'getActivityTargetEntities'
+                    'getActivityTargets'
                 ]
             )
             ->disableOriginalConstructor()
@@ -132,7 +143,7 @@ class EmailActivityListProviderTest extends \PHPUnit_Framework_TestCase
             ->method('getOrganization')
             ->willReturn($organization);
         $emailMock->expects($this->exactly(1))
-            ->method('getActivityTargetEntities')
+            ->method('getActivityTargets')
             ->willReturn([]);
 
         $activityListMock = $this->getMockBuilder('Oro\Bundle\ActivityListBundle\Entity\ActivityList')
@@ -161,5 +172,22 @@ class EmailActivityListProviderTest extends \PHPUnit_Framework_TestCase
         $owner = $activityOwnerArray[0];
         $this->assertEquals($organization->getName(), $owner->getOrganization()->getName());
         $this->assertEquals($user->getUsername(), $owner->getUser()->getUsername());
+    }
+
+    public function testFeatureToggleable()
+    {
+        $this->assertInstanceOf(FeatureToggleableInterface::class, $this->emailActivityListProvider);
+
+        $this->emailActivityListProvider->setFeatureChecker($this->featureChecker);
+        $this->emailActivityListProvider->addFeature('email');
+
+        $mock = $this->getMockBuilder(FeatureCheckerHolderTrait::class)->setMethods(['isFeaturesEnabled'])
+            ->getMockForTrait();
+
+        $mock->expects($this->any())
+            ->method('isFeaturesEnabled')
+            ->will($this->returnValue(true));
+
+        $this->assertTrue($mock->isFeaturesEnabled());
     }
 }

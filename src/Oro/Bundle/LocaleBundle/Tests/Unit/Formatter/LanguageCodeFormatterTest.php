@@ -26,7 +26,7 @@ class LanguageCodeFormatterTest extends \PHPUnit_Framework_TestCase
     {
         IntlTestHelper::requireIntl($this);
 
-        $this->translator   = $this->getMock('Symfony\Component\Translation\TranslatorInterface');
+        $this->translator   = $this->createMock('Symfony\Component\Translation\TranslatorInterface');
         $this->configManager = $this->getMockBuilder('Oro\Bundle\ConfigBundle\Config\ConfigManager')
             ->disableOriginalConstructor()->getMock();
 
@@ -63,6 +63,48 @@ class LanguageCodeFormatterTest extends \PHPUnit_Framework_TestCase
             [
                 'value' => 'en_CA',
                 'expected' => 'Canadian English',
+            ],
+            [
+                'value' => 'bad_Code',
+                'expected' => 'bad_Code',
+            ],
+            [
+                'value' => '',
+                'expected' => 'N/A',
+            ],
+        ];
+    }
+
+    /**
+     * @param string $value
+     * @param string $expected
+     *
+     * @dataProvider formatLocaleCodeProvider
+     */
+    public function testFormatLocaleCode($value, $expected)
+    {
+        $this->translator->expects($value ? $this->never() : $this->once())
+            ->method('trans')
+            ->with('N/A')
+            ->willReturn('N/A');
+
+        $this->configManager->expects($value ? $this->once() : $this->never())
+            ->method('get')
+            ->with(LanguageCodeFormatter::CONFIG_KEY_DEFAULT_LANGUAGE)
+            ->willReturn('en');
+
+        $this->assertSame($expected, $this->formatter->formatLocale($value));
+    }
+
+    /**
+     * @return array
+     */
+    public function formatLocaleCodeProvider()
+    {
+        return [
+            [
+                'value' => 'en_CA',
+                'expected' => 'English (Canada)',
             ],
             [
                 'value' => 'bad_Code',

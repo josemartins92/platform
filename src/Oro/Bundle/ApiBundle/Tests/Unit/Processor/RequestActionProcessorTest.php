@@ -69,7 +69,7 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
      */
     protected function addProcessor($processorId, $groupName)
     {
-        $processor = $this->getMock('Oro\Component\ChainProcessor\ProcessorInterface');
+        $processor = $this->createMock('Oro\Component\ChainProcessor\ProcessorInterface');
         $this->processorFactory->addProcessor($processorId, $processor);
         $this->processorBag->addProcessor(
             $processorId,
@@ -81,13 +81,21 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
         return $processor;
     }
 
-    public function testProcessEmptyProcessors()
+    public function loggerProvider()
+    {
+        return [
+            [false],
+            [true],
+        ];
+    }
+
+    public function testWhenNoProcessors()
     {
         $context = $this->getContext();
         $this->processor->process($context);
     }
 
-    public function testProcessWhenNoExceptionsAndErrors()
+    public function testWhenNoExceptionsAndErrors()
     {
         $context = $this->getContext();
 
@@ -104,8 +112,17 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
         $this->processor->process($context);
     }
 
-    public function testProcessWhenExceptionOccurs()
+    /**
+     * @dataProvider loggerProvider
+     */
+    public function testWhenExceptionOccurs($withLogger)
     {
+        $logger = null;
+        if ($withLogger) {
+            $logger = $this->createMock('Psr\Log\LoggerInterface');
+            $this->processor->setLogger($logger);
+        }
+
         $context = $this->getContext();
 
         $exception = new \Exception('test exception');
@@ -129,6 +146,14 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
             ->method('process')
             ->with($this->identicalTo($context));
 
+        if (null !== $logger) {
+            $logger->expects($this->once())
+                ->method('error')
+                ->with('The execution of "processor1" processor is failed.', ['exception' => $exception]);
+            $logger->expects($this->never())
+                ->method('warning');
+        }
+
         $this->processor->process($context);
 
         $this->assertEquals(
@@ -137,12 +162,19 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    public function testProcessWhenExceptionOccursAndLoggerExists()
+    /**
+     * @dataProvider loggerProvider
+     */
+    public function testWhenExceptionOccursAndSoftErrorsHandlingEnabled($withLogger)
     {
-        $logger = $this->getMock('Psr\Log\LoggerInterface');
-        $this->processor->setLogger($logger);
+        $logger = null;
+        if ($withLogger) {
+            $logger = $this->createMock('Psr\Log\LoggerInterface');
+            $this->processor->setLogger($logger);
+        }
 
         $context = $this->getContext();
+        $context->setSoftErrorsHandling(true);
 
         $exception = new \Exception('test exception');
 
@@ -165,9 +197,13 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
             ->method('process')
             ->with($this->identicalTo($context));
 
-        $logger->expects($this->once())
-            ->method('error')
-            ->with('The execution of "processor1" processor is failed.', ['exception' => $exception]);
+        if (null !== $logger) {
+            $logger->expects($this->never())
+                ->method('error');
+            $logger->expects($this->once())
+                ->method('warning')
+                ->with('An exception occurred in "processor1" processor.', ['exception' => $exception]);
+        }
 
         $this->processor->process($context);
 
@@ -177,45 +213,16 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    public function testProcessWhenErrorOccurs()
+    /**
+     * @dataProvider loggerProvider
+     */
+    public function testWhenErrorOccurs($withLogger)
     {
-        $context = $this->getContext();
-
-        $error = Error::create('some error');
-
-        $processor1 = $this->addProcessor('processor1', 'group1');
-        $processor2 = $this->addProcessor('processor2', 'group1');
-        $processor3 = $this->addProcessor('processor3', 'group2');
-        $processor10 = $this->addProcessor('processor10', RequestActionProcessor::NORMALIZE_RESULT_GROUP);
-
-        $processor1->expects($this->once())
-            ->method('process')
-            ->with($this->identicalTo($context))
-            ->willReturnCallback(
-                function (Context $context) use ($error) {
-                    $context->addError($error);
-                }
-            );
-        $processor2->expects($this->never())
-            ->method('process');
-        $processor3->expects($this->never())
-            ->method('process');
-        $processor10->expects($this->once())
-            ->method('process')
-            ->with($this->identicalTo($context));
-
-        $this->processor->process($context);
-
-        $this->assertEquals(
-            [$error],
-            $context->getErrors()
-        );
-    }
-
-    public function testProcessWhenErrorOccursAndLoggerExists()
-    {
-        $logger = $this->getMock('Psr\Log\LoggerInterface');
-        $this->processor->setLogger($logger);
+        $logger = null;
+        if ($withLogger) {
+            $logger = $this->createMock('Psr\Log\LoggerInterface');
+            $this->processor->setLogger($logger);
+        }
 
         $context = $this->getContext();
 
@@ -242,8 +249,12 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
             ->method('process')
             ->with($this->identicalTo($context));
 
-        $logger->expects($this->never())
-            ->method('error');
+        if (null !== $logger) {
+            $logger->expects($this->never())
+                ->method('error');
+            $logger->expects($this->never())
+                ->method('warning');
+        }
 
         $this->processor->process($context);
 
@@ -253,9 +264,71 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    public function testProcessWhenExceptionOccursAndNormalizeResultGroupIsDisabled()
+    /**
+     * @dataProvider loggerProvider
+     */
+    public function testWhenErrorOccursAndSoftErrorsHandlingEnabled($withLogger)
     {
+        $logger = null;
+        if ($withLogger) {
+            $logger = $this->createMock('Psr\Log\LoggerInterface');
+            $this->processor->setLogger($logger);
+        }
+
         $context = $this->getContext();
+        $context->setSoftErrorsHandling(true);
+
+        $error = Error::create('some error');
+
+        $processor1 = $this->addProcessor('processor1', 'group1');
+        $processor2 = $this->addProcessor('processor2', 'group1');
+        $processor3 = $this->addProcessor('processor3', 'group2');
+        $processor10 = $this->addProcessor('processor10', RequestActionProcessor::NORMALIZE_RESULT_GROUP);
+
+        $processor1->expects($this->once())
+            ->method('process')
+            ->with($this->identicalTo($context))
+            ->willReturnCallback(
+                function (Context $context) use ($error) {
+                    $context->addError($error);
+                }
+            );
+        $processor2->expects($this->never())
+            ->method('process');
+        $processor3->expects($this->never())
+            ->method('process');
+        $processor10->expects($this->once())
+            ->method('process')
+            ->with($this->identicalTo($context));
+
+        if (null !== $logger) {
+            $logger->expects($this->never())
+                ->method('error');
+            $logger->expects($this->never())
+                ->method('warning');
+        }
+
+        $this->processor->process($context);
+
+        $this->assertEquals(
+            [$error],
+            $context->getErrors()
+        );
+    }
+
+    /**
+     * @dataProvider loggerProvider
+     */
+    public function testWhenExceptionOccursAndNormalizeResultGroupIsDisabled($withLogger)
+    {
+        $logger = null;
+        if ($withLogger) {
+            $logger = $this->createMock('Psr\Log\LoggerInterface');
+            $this->processor->setLogger($logger);
+        }
+
+        $context = $this->getContext();
+        // disable "normalize_result" group
         $context->setLastGroup('group2');
 
         $exception = new \Exception('test exception');
@@ -276,23 +349,39 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
         $processor10->expects($this->never())
             ->method('process');
 
-        $this->setExpectedException(
-            get_class($exception),
-            $exception->getMessage()
-        );
+        $this->expectException(get_class($exception));
+        $this->expectExceptionMessage($exception->getMessage());
+
+        if (null !== $logger) {
+            $logger->expects($this->once())
+                ->method('error')
+                ->with('The execution of "processor1" processor is failed.', ['exception' => $exception]);
+            $logger->expects($this->never())
+                ->method('warning');
+        }
 
         $this->processor->process($context);
     }
 
-    public function testProcessWhenExceptionOccursAndNormalizeResultGroupIsDisabledAndLoggerExists()
+    /**
+     * @dataProvider loggerProvider
+     */
+    public function testWhenExceptionOccursAndNormalizeResultGroupIsDisabledAndSoftErrorsHandlingEnabled($withLogger)
     {
-        $logger = $this->getMock('Psr\Log\LoggerInterface');
-        $this->processor->setLogger($logger);
+        $logger = null;
+        if ($withLogger) {
+            $logger = $this->createMock('Psr\Log\LoggerInterface');
+            $this->processor->setLogger($logger);
+        }
 
         $context = $this->getContext();
+        $context->setSoftErrorsHandling(true);
+        // disable "normalize_result" group
         $context->setLastGroup('group2');
 
         $exception = new \Exception('test exception');
+
+        $error = Error::createByException($exception);
 
         $processor1 = $this->addProcessor('processor1', 'group1');
         $processor2 = $this->addProcessor('processor2', 'group1');
@@ -310,21 +399,35 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
         $processor10->expects($this->never())
             ->method('process');
 
-        $this->setExpectedException(
-            get_class($exception),
-            $exception->getMessage()
-        );
-
-        $logger->expects($this->once())
-            ->method('error')
-            ->with('The execution of "processor1" processor is failed.', ['exception' => $exception]);
+        if (null !== $logger) {
+            $logger->expects($this->never())
+                ->method('error');
+            $logger->expects($this->once())
+                ->method('warning')
+                ->with('An exception occurred in "processor1" processor.', ['exception' => $exception]);
+        }
 
         $this->processor->process($context);
+
+        $this->assertEquals(
+            [$error],
+            $context->getErrors()
+        );
     }
 
-    public function testProcessWhenErrorOccursAndNormalizeResultGroupIsDisabled()
+    /**
+     * @dataProvider loggerProvider
+     */
+    public function testWhenErrorOccursAndNormalizeResultGroupIsDisabled($withLogger)
     {
+        $logger = null;
+        if ($withLogger) {
+            $logger = $this->createMock('Psr\Log\LoggerInterface');
+            $this->processor->setLogger($logger);
+        }
+
         $context = $this->getContext();
+        // disable "normalize_result" group
         $context->setLastGroup('group2');
 
         $error = Error::create('some error');
@@ -349,20 +452,34 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
         $processor10->expects($this->never())
             ->method('process');
 
-        $this->setExpectedException(
-            '\Oro\Bundle\ApiBundle\Exception\RuntimeException',
-            sprintf('An unexpected error occurred: %s.', $error->getTitle())
-        );
+        $this->expectException('\Oro\Bundle\ApiBundle\Exception\RuntimeException');
+        $this->expectExceptionMessage(sprintf('An unexpected error occurred: %s.', $error->getTitle()));
+
+        if (null !== $logger) {
+            $logger->expects($this->once())
+                ->method('error')
+                ->with('The execution of "processor1" processor is failed.');
+            $logger->expects($this->never())
+                ->method('warning');
+        }
 
         $this->processor->process($context);
     }
 
-    public function testProcessWhenErrorOccursAndNormalizeResultGroupIsDisabledAndLoggerExists()
+    /**
+     * @dataProvider loggerProvider
+     */
+    public function testWhenErrorOccursAndNormalizeResultGroupIsDisabledAndSoftErrorsHandlingEnabled($withLogger)
     {
-        $logger = $this->getMock('Psr\Log\LoggerInterface');
-        $this->processor->setLogger($logger);
+        $logger = null;
+        if ($withLogger) {
+            $logger = $this->createMock('Psr\Log\LoggerInterface');
+            $this->processor->setLogger($logger);
+        }
 
         $context = $this->getContext();
+        $context->setSoftErrorsHandling(true);
+        // disable "normalize_result" group
         $context->setLastGroup('group2');
 
         $error = Error::create('some error');
@@ -387,20 +504,32 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
         $processor10->expects($this->never())
             ->method('process');
 
-        $this->setExpectedException(
-            '\Oro\Bundle\ApiBundle\Exception\RuntimeException',
-            sprintf('An unexpected error occurred: %s.', $error->getTitle())
-        );
-
-        $logger->expects($this->once())
-            ->method('error')
-            ->with('The execution of "processor1" processor is failed.');
+        if (null !== $logger) {
+            $logger->expects($this->never())
+                ->method('error');
+            $logger->expects($this->never())
+                ->method('warning');
+        }
 
         $this->processor->process($context);
+
+        $this->assertEquals(
+            [$error],
+            $context->getErrors()
+        );
     }
 
-    public function testProcessWhenExceptionOccursInNormalizeResultGroup()
+    /**
+     * @dataProvider loggerProvider
+     */
+    public function testWhenExceptionOccursInNormalizeResultGroup($withLogger)
     {
+        $logger = null;
+        if ($withLogger) {
+            $logger = $this->createMock('Psr\Log\LoggerInterface');
+            $this->processor->setLogger($logger);
+        }
+
         $context = $this->getContext();
 
         $exception = new \Exception('test exception');
@@ -419,19 +548,37 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
         $processor11->expects($this->never())
             ->method('process');
 
-        $this->setExpectedException(get_class($exception), $exception->getMessage());
+        $this->expectException(get_class($exception));
+        $this->expectExceptionMessage($exception->getMessage());
+
+        if (null !== $logger) {
+            $logger->expects($this->once())
+                ->method('error')
+                ->with('The execution of "processor10" processor is failed.', ['exception' => $exception]);
+            $logger->expects($this->never())
+                ->method('warning');
+        }
 
         $this->processor->process($context);
     }
 
-    public function testProcessWhenExceptionOccursInNormalizeResultGroupAndLoggerExists()
+    /**
+     * @dataProvider loggerProvider
+     */
+    public function testWhenExceptionOccursInNormalizeResultGroupAndSoftErrorsHandlingEnabled($withLogger)
     {
-        $logger = $this->getMock('Psr\Log\LoggerInterface');
-        $this->processor->setLogger($logger);
+        $logger = null;
+        if ($withLogger) {
+            $logger = $this->createMock('Psr\Log\LoggerInterface');
+            $this->processor->setLogger($logger);
+        }
 
         $context = $this->getContext();
+        $context->setSoftErrorsHandling(true);
 
         $exception = new \Exception('test exception');
+
+        $error = Error::createByException($exception);
 
         $processor1 = $this->addProcessor('processor1', 'group1');
         $processor10 = $this->addProcessor('processor10', RequestActionProcessor::NORMALIZE_RESULT_GROUP);
@@ -447,17 +594,33 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
         $processor11->expects($this->never())
             ->method('process');
 
-        $this->setExpectedException(get_class($exception), $exception->getMessage());
-
-        $logger->expects($this->once())
-            ->method('error')
-            ->with('The execution of "processor10" processor is failed.', ['exception' => $exception]);
+        if (null !== $logger) {
+            $logger->expects($this->never())
+                ->method('error');
+            $logger->expects($this->once())
+                ->method('warning')
+                ->with('An exception occurred in "processor10" processor.', ['exception' => $exception]);
+        }
 
         $this->processor->process($context);
+
+        $this->assertEquals(
+            [$error],
+            $context->getErrors()
+        );
     }
 
-    public function testProcessWhenErrorOccursInNormalizeResultGroup()
+    /**
+     * @dataProvider loggerProvider
+     */
+    public function testWhenErrorOccursInNormalizeResultGroup($withLogger)
     {
+        $logger = null;
+        if ($withLogger) {
+            $logger = $this->createMock('Psr\Log\LoggerInterface');
+            $this->processor->setLogger($logger);
+        }
+
         $context = $this->getContext();
 
         $error = Error::create('some error');
@@ -481,6 +644,13 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
             ->method('process')
             ->with($this->identicalTo($context));
 
+        if (null !== $logger) {
+            $logger->expects($this->never())
+                ->method('error');
+            $logger->expects($this->never())
+                ->method('warning');
+        }
+
         $this->processor->process($context);
 
         $this->assertEquals(
@@ -489,12 +659,19 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    public function testProcessWhenErrorOccursInNormalizeResultGroupAndLoggerExists()
+    /**
+     * @dataProvider loggerProvider
+     */
+    public function testWhenErrorOccursInNormalizeResultGroupAndSoftErrorsHandlingEnabled($withLogger)
     {
-        $logger = $this->getMock('Psr\Log\LoggerInterface');
-        $this->processor->setLogger($logger);
+        $logger = null;
+        if ($withLogger) {
+            $logger = $this->createMock('Psr\Log\LoggerInterface');
+            $this->processor->setLogger($logger);
+        }
 
         $context = $this->getContext();
+        $context->setSoftErrorsHandling(true);
 
         $error = Error::create('some error');
 
@@ -517,8 +694,12 @@ class RequestActionProcessorTest extends \PHPUnit_Framework_TestCase
             ->method('process')
             ->with($this->identicalTo($context));
 
-        $logger->expects($this->never())
-            ->method('error');
+        if (null !== $logger) {
+            $logger->expects($this->never())
+                ->method('error');
+            $logger->expects($this->never())
+                ->method('warning');
+        }
 
         $this->processor->process($context);
 

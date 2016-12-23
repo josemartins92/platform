@@ -3,13 +3,15 @@
 namespace Oro\Bundle\FilterBundle\Filter;
 
 use LogicException;
-
-use Oro\Bundle\FilterBundle\Form\Type\Filter\DictionaryFilterType;
 use Oro\Bundle\FilterBundle\Datasource\FilterDatasourceAdapterInterface;
 use Oro\Bundle\FilterBundle\Datasource\Orm\OrmFilterDatasourceAdapter;
+use Oro\Bundle\FilterBundle\Form\Type\Filter\DictionaryFilterType;
+use Oro\Component\DoctrineUtils\ORM\QueryUtils;
 
 class DictionaryFilter extends BaseMultiChoiceFilter
 {
+    const FILTER_TYPE_NAME = 'dictionary';
+
     /**
      * {@inheritdoc}
      */
@@ -24,6 +26,7 @@ class DictionaryFilter extends BaseMultiChoiceFilter
             $params[FilterUtility::FORM_OPTIONS_KEY]['dictionary_code'] = $params['dictionary_code'];
             unset($params['dictionary_code']);
         }
+
         parent::init($name, $params);
     }
 
@@ -85,6 +88,10 @@ class DictionaryFilter extends BaseMultiChoiceFilter
         try {
             $fieldName = $this->get(FilterUtility::DATA_NAME_KEY);
             list($joinAlias) = explode('.', $fieldName);
+            if ($join = QueryUtils::findJoinByAlias($ds->getQueryBuilder(), $joinAlias)) {
+                return $join->getJoin();
+            }
+
             $qb = $ds->getQueryBuilder();
             $em = $qb->getEntityManager();
             $class = $this->get('options')['class'];

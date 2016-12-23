@@ -1,6 +1,8 @@
 <?php
 namespace Oro\Bundle\SearchBundle\Tests\Unit\Engine;
 
+use Symfony\Component\PropertyAccess\PropertyAccess;
+
 use Oro\Bundle\SearchBundle\Engine\Indexer;
 use Oro\Bundle\SearchBundle\Engine\ObjectMapper;
 use Oro\Bundle\SearchBundle\Provider\SearchMappingProvider;
@@ -178,10 +180,11 @@ class ObjectMapperTest extends \PHPUnit_Framework_TestCase
         $mapperProvider  = new SearchMappingProvider($eventDispatcher);
         $mapperProvider->setMappingConfig($this->mappingConfig);
 
-        $this->dispatcher = $this->getMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
+        $this->dispatcher = $this->createMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
 
         $this->mapper = new ObjectMapper($this->dispatcher, $this->mappingConfig);
         $this->mapper->setMappingProvider($mapperProvider);
+        $this->mapper->setPropertyAccessor(PropertyAccess::createPropertyAccessor());
     }
 
     /**
@@ -330,7 +333,7 @@ class ObjectMapperTest extends \PHPUnit_Framework_TestCase
 
     public function testNonExistsConfig()
     {
-        $this->assertEquals(false, $this->mapper->getEntityConfig('non exists entity'));
+        $this->assertEquals([], $this->mapper->getEntityConfig('non exists entity'));
     }
 
     public function testSelectedData()
@@ -340,11 +343,11 @@ class ObjectMapperTest extends \PHPUnit_Framework_TestCase
             ->getMock();
 
         $query->expects($this->once())
-            ->method('getSelect')
+            ->method('getSelectDataFields')
             ->willReturn([
-                'text.sku',
-                'text.defaultName',
-                'notExistingField'
+                'text.sku' => 'sku',
+                'text.defaultName' => 'defaultName',
+                'notExistingField' => 'notExistingField'
             ]);
 
         $item = [

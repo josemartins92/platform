@@ -37,7 +37,7 @@ define(function(require) {
             var dropdown = this.$('.context-items-dropdown');
             var firstItem = this.$('.activity-context-current-item');
             this.collection.on('add', function(model) {
-                var gridUrl = self.options.params.grid_path + '/' + model.attributes.className;
+                var gridUrl = encodeURI(self.options.params.grid_path + '/' + model.attributes.className);
                 var view = self.template({
                         entity: model
                     });
@@ -57,8 +57,8 @@ define(function(require) {
                     var item = $(this);
                     firstItem.html(item.html());
                     item.addClass('active');
-
-                    WidgetManager.getWidgetInstanceByAlias('activity-context-grid', function(widget) {
+                    var gridWidgetName = self.options.gridWidgetName || 'activity-context-grid';
+                    WidgetManager.getWidgetInstanceByAlias(gridWidgetName, function(widget) {
                         widget.setUrl(gridUrl);
                         widget.render();
                     });

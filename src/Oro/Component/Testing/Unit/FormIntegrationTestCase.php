@@ -4,6 +4,7 @@ namespace Oro\Component\Testing\Unit;
 
 use Symfony\Component\Form\Extension\Validator\ValidatorExtension;
 use Symfony\Component\Form\Test\FormIntegrationTestCase as BaseTestCase;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Translation\TranslatorInterface;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidatorInterface;
@@ -55,7 +56,7 @@ class FormIntegrationTestCase extends BaseTestCase
     protected function getValidator()
     {
         /* @var $loader \PHPUnit_Framework_MockObject_MockObject|LoaderInterface */
-        $loader = $this->getMock('Symfony\Component\Validator\Mapping\Loader\LoaderInterface');
+        $loader = $this->createMock('Symfony\Component\Validator\Mapping\Loader\LoaderInterface');
         $loader
             ->expects($this->any())
             ->method('loadClassMetadata')
@@ -70,6 +71,67 @@ class FormIntegrationTestCase extends BaseTestCase
         );
 
         return $validator;
+    }
+
+    /**
+     * @param FormInterface $form
+     */
+    protected function assertFormIsValid(FormInterface $form)
+    {
+        $formName = $form->getName();
+        $this->assertTrue($form->isValid(), "{$formName} form should be valid.");
+    }
+
+    /**
+     * @param FormInterface $form
+     */
+    protected function assertFormIsNotValid(FormInterface $form)
+    {
+        $formName = $form->getName();
+        $this->assertFalse($form->isValid(), "{$formName} form shouldn't be valid.");
+    }
+
+
+    /**
+     * @param mixed         $expectedValue
+     * @param string        $optionName
+     * @param FormInterface $form
+     */
+    protected function assertFormOptionEqual($expectedValue, $optionName, FormInterface $form)
+    {
+        $formName = $form->getName();
+        $value = var_export($expectedValue, true);
+        $this->assertEquals(
+            $expectedValue,
+            $form->getConfig()->getOption($optionName),
+            "Failed asserting that {$optionName} option of {$formName} form matches expected {$value}."
+        );
+    }
+
+    /**
+     * @param               $expectedFieldName
+     * @param FormInterface $form
+     */
+    protected function assertFormContainsField($expectedFieldName, FormInterface $form)
+    {
+        $formName = $form->getName();
+        $this->assertTrue(
+            $form->offsetExists($expectedFieldName),
+            "Failed asserting that {$expectedFieldName} field exists at {$formName} form."
+        );
+    }
+
+    /**
+     * @param               $expectedFieldName
+     * @param FormInterface $form
+     */
+    protected function assertFormNotContainsField($expectedFieldName, FormInterface $form)
+    {
+        $formName = $form->getName();
+        $this->assertFalse(
+            $form->offsetExists($expectedFieldName),
+            "Failed asserting that {$expectedFieldName} field not exists at {$formName} form."
+        );
     }
 
     /**
@@ -89,7 +151,7 @@ class FormIntegrationTestCase extends BaseTestCase
     protected function getConstraintValidatorFactory()
     {
         /* @var $factory \PHPUnit_Framework_MockObject_MockObject|ConstraintValidatorFactoryInterface */
-        $factory = $this->getMock('Symfony\Component\Validator\ConstraintValidatorFactoryInterface');
+        $factory = $this->createMock('Symfony\Component\Validator\ConstraintValidatorFactoryInterface');
 
         $factory->expects($this->any())
             ->method('getInstance')
@@ -116,7 +178,7 @@ class FormIntegrationTestCase extends BaseTestCase
     protected function getTranslator()
     {
         /* @var $translator \PHPUnit_Framework_MockObject_MockObject|TranslatorInterface */
-        $translator = $this->getMock('Symfony\Component\Translation\TranslatorInterface');
+        $translator = $this->createMock('Symfony\Component\Translation\TranslatorInterface');
 
         $translator->expects($this->any())
             ->method('trans')

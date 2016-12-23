@@ -6,7 +6,7 @@ use Symfony\Component\PropertyAccess\PropertyPath;
 use Symfony\Component\Security\Core\User\User;
 
 use Oro\Component\Action\Action\AssignActiveUser;
-use Oro\Component\Action\Model\ContextAccessor;
+use Oro\Component\ConfigExpression\ContextAccessor;
 use Oro\Component\ConfigExpression\Tests\Unit\Fixtures\ItemStub;
 
 class AssignActiveUserTest extends \PHPUnit_Framework_TestCase
@@ -75,7 +75,8 @@ class AssignActiveUserTest extends \PHPUnit_Framework_TestCase
      */
     public function testInitializeException(array $options, $exceptionName, $exceptionMessage)
     {
-        $this->setExpectedException($exceptionName, $exceptionMessage);
+        $this->expectException($exceptionName);
+        $this->expectExceptionMessage($exceptionMessage);
         $this->action->initialize($options);
     }
 

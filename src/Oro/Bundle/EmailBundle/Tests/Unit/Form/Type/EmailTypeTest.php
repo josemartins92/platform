@@ -23,6 +23,7 @@ use Oro\Bundle\EmailBundle\Form\Type\EmailAttachmentsType;
 use Oro\Bundle\EmailBundle\Form\Type\EmailTemplateSelectType;
 use Oro\Bundle\EmailBundle\Form\Type\EmailAddressFromType;
 use Oro\Bundle\EmailBundle\Form\Type\EmailAddressRecipientsType;
+use Oro\Bundle\EntityBundle\Provider\EntityNameResolver;
 use Oro\Bundle\UserBundle\Entity\User;
 
 class EmailTypeTest extends TypeTestCase
@@ -50,13 +51,15 @@ class EmailTypeTest extends TypeTestCase
     protected function setUp()
     {
         parent::setUp();
-        $this->securityContext  = $this->getMock('Symfony\Component\Security\Core\SecurityContextInterface');
+        $this->securityContext  = $this->createMock('Symfony\Component\Security\Core\SecurityContextInterface');
         $this->emailRenderer = $this->getMockBuilder('Oro\Bundle\EmailBundle\Provider\EmailRenderer')
             ->disableOriginalConstructor()->getMock();
         $this->emailModelBuilderHelper = $this
             ->getMockBuilder('Oro\Bundle\EmailBundle\Builder\Helper\EmailModelBuilderHelper')
             ->disableOriginalConstructor()->getMock();
-        $this->htmlTagProvider = $this->getMock('Oro\Bundle\FormBundle\Provider\HtmlTagProvider');
+        $this->htmlTagProvider = $this->createMock('Oro\Bundle\FormBundle\Provider\HtmlTagProvider');
+        $this->configManager = $this->getMockBuilder('Oro\Bundle\ConfigBundle\Config\ConfigManager')
+            ->disableOriginalConstructor()->getMock();
     }
 
     /**
@@ -64,7 +67,12 @@ class EmailTypeTest extends TypeTestCase
      */
     protected function createEmailType()
     {
-        return new EmailType($this->securityContext, $this->emailRenderer, $this->emailModelBuilderHelper);
+        return new EmailType(
+            $this->securityContext,
+            $this->emailRenderer,
+            $this->emailModelBuilderHelper,
+            $this->configManager
+        );
     }
 
     /**
@@ -125,7 +133,7 @@ class EmailTypeTest extends TypeTestCase
         $configManager = $this->getMockBuilder('Oro\Bundle\ConfigBundle\Config\ConfigManager')
             ->disableOriginalConstructor()
             ->getMock();
-        $htmlTagProvider = $this->getMock('Oro\Bundle\FormBundle\Provider\HtmlTagProvider');
+        $htmlTagProvider = $this->createMock('Oro\Bundle\FormBundle\Provider\HtmlTagProvider');
         $htmlTagProvider->expects($this->any())
             ->method('getAllowedElements')
             ->willReturn(['br', 'a']);
@@ -166,7 +174,9 @@ class EmailTypeTest extends TypeTestCase
         $eventDispatcher = $this->getMockBuilder('Symfony\Component\EventDispatcher\EventDispatcher')
             ->disableOriginalConstructor()
             ->getMock();
-        $entityTitleResolver = $this->getMock('Oro\Bundle\SearchBundle\Resolver\EntityTitleResolverInterface');
+        $entityTitleResolver = $this->getMockBuilder(EntityNameResolver::class)
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
         $contextsSelectType = new ContextsSelectType(
             $em,
@@ -231,7 +241,7 @@ class EmailTypeTest extends TypeTestCase
 
     public function testSetDefaultOptions()
     {
-        $resolver = $this->getMock('Symfony\Component\OptionsResolver\OptionsResolverInterface');
+        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolverInterface');
         $resolver->expects($this->once())
             ->method('setDefaults')
             ->with(

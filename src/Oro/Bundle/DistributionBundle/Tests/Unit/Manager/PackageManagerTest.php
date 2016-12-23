@@ -549,7 +549,7 @@ class PackageManagerTest extends \PHPUnit_Framework_TestCase
         // composer and repository
         $composer = $this->createComposerMock();
         $repositoryManager = $this->createRepositoryManagerMock();
-        $localRepository = $this->getMock('Composer\Repository\WritableArrayRepository');
+        $localRepository = $this->createMock('Composer\Repository\WritableArrayRepository');
 
         $composer->expects($this->any())
             ->method('getRepositoryManager')
@@ -1209,7 +1209,6 @@ class PackageManagerTest extends \PHPUnit_Framework_TestCase
 
         $manager = $this->createPackageManager($composer);
         $this->assertTrue($manager->isUpdateAvailable($packageName));
-
     }
 
     /**
@@ -1257,7 +1256,7 @@ class PackageManagerTest extends \PHPUnit_Framework_TestCase
             $parser = new VersionParser();
         }
 
-        return new $class($name, $parser->normalize($version), $version);
+        return new $class($name, $parser->normalize($version), (string)$version);
     }
 
     /**
@@ -1444,7 +1443,7 @@ class PackageManagerTest extends \PHPUnit_Framework_TestCase
     protected function createPackageMock($name)
     {
         /** @var \PHPUnit_Framework_MockObject_MockObject|Package $package */
-        $package = $this->getMock('Composer\Package\PackageInterface');
+        $package = $this->createMock('Composer\Package\PackageInterface');
         $package->id = $name . uniqid();
 
         $package->expects($this->any())
@@ -1469,7 +1468,7 @@ class PackageManagerTest extends \PHPUnit_Framework_TestCase
      */
     protected function createLoggerMock()
     {
-        return $this->getMock('Psr\Log\LoggerInterface');
+        return $this->createMock('Psr\Log\LoggerInterface');
     }
 
     /**
@@ -1491,7 +1490,7 @@ class PackageManagerTest extends \PHPUnit_Framework_TestCase
      */
     protected function createLocalRepositoryMock()
     {
-        return $this->getMock('Composer\Repository\WritableRepositoryInterface');
+        return $this->createMock('Composer\Repository\WritableRepositoryInterface');
     }
 
     /**

@@ -2,6 +2,9 @@
 
 namespace Oro\Bundle\DataGridBundle\Tests\Unit\Datasource\Orm;
 
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\Configuration;
 use Doctrine\ORM\Mapping\ClassMetadata;
@@ -9,6 +12,8 @@ use Doctrine\DBAL\Platforms\MySqlPlatform;
 
 use Oro\Component\DoctrineUtils\ORM\QueryHintResolver;
 
+use Oro\Bundle\DataGridBundle\Datasource\Orm\Configs\YamlProcessor;
+use Oro\Bundle\DataGridBundle\Datasource\ParameterBinderInterface;
 use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
 
 class OrmDatasourceTest extends \PHPUnit_Framework_TestCase
@@ -16,16 +21,16 @@ class OrmDatasourceTest extends \PHPUnit_Framework_TestCase
     /** @var OrmDatasource */
     protected $datasource;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var EntityManager|\PHPUnit_Framework_MockObject_MockObject */
     protected $em;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $doctrine;
+    /** @var YamlProcessor|\PHPUnit_Framework_MockObject_MockObject */
+    protected $processor;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var EventDispatcherInterface|\PHPUnit_Framework_MockObject_MockObject */
     protected $eventDispatcher;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var ParameterBinderInterface|\PHPUnit_Framework_MockObject_MockObject */
     protected $parameterBinder;
 
     protected function setUp()
@@ -34,15 +39,15 @@ class OrmDatasourceTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->doctrine = $this->getMockBuilder('Doctrine\Common\Persistence\ManagerRegistry')
+        $this->processor = $this->getMockBuilder('Oro\Bundle\DataGridBundle\Datasource\Orm\Configs\YamlProcessor')
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->parameterBinder = $this->getMock('Oro\\Bundle\\DataGridBundle\\Datasource\\ParameterBinderInterface');
-        $this->eventDispatcher = $this->getMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
+        $this->parameterBinder = $this->createMock('Oro\\Bundle\\DataGridBundle\\Datasource\\ParameterBinderInterface');
+        $this->eventDispatcher = $this->createMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
         $queryHintResolver     = new QueryHintResolver();
         $this->datasource      = new OrmDatasource(
-            $this->doctrine,
+            $this->processor,
             $this->eventDispatcher,
             $this->parameterBinder,
             $queryHintResolver
@@ -65,11 +70,6 @@ class OrmDatasourceTest extends \PHPUnit_Framework_TestCase
             $configs['hints'] = $hints;
         }
 
-        $this->doctrine->expects($this->once())
-            ->method('getManagerForClass')
-            ->with('Test')
-            ->willReturn($this->em);
-
         $this->prepareEntityManagerForTestHints($entityClass);
 
         $query = new Query($this->em);
@@ -82,14 +82,15 @@ class OrmDatasourceTest extends \PHPUnit_Framework_TestCase
         $qb = $this->getMockBuilder('Doctrine\ORM\QueryBuilder')
             ->setConstructorArgs([$this->em])
             ->getMock();
-        $this->em->expects($this->once())
-            ->method('createQueryBuilder')
-            ->will($this->returnValue($qb));
+
         $qb->expects($this->once())
             ->method('getQuery')
             ->will($this->returnValue($query));
-
-        $datagrid = $this->getMock('Oro\Bundle\DataGridBundle\Datagrid\DatagridInterface');
+        $this->processor
+            ->expects($this->once())
+            ->method('processQuery')
+            ->willReturn($qb);
+        $datagrid = $this->createMock('Oro\Bundle\DataGridBundle\Datagrid\DatagridInterface');
         $this->datasource->process($datagrid, $configs);
         $this->datasource->getResults();
 
@@ -193,7 +194,7 @@ class OrmDatasourceTest extends \PHPUnit_Framework_TestCase
         $parameters = ['foo'];
         $append     = true;
 
-        $datagrid         = $this->getMock('Oro\Bundle\DataGridBundle\Datagrid\DatagridInterface');
+        $datagrid         = $this->createMock('Oro\Bundle\DataGridBundle\Datagrid\DatagridInterface');
         $configs['query'] = [
             'select' => ['t'],
             'from'   => [
@@ -201,22 +202,17 @@ class OrmDatasourceTest extends \PHPUnit_Framework_TestCase
             ]
         ];
 
-        $this->doctrine->expects($this->once())
-            ->method('getManagerForClass')
-            ->with('Test')
-            ->willReturn($this->em);
-
         $qb = $this->getMockBuilder('Doctrine\ORM\QueryBuilder')
             ->setConstructorArgs([$this->em])
             ->getMock();
-        $this->em->expects($this->once())
-            ->method('createQueryBuilder')
-            ->will($this->returnValue($qb));
 
         $this->parameterBinder->expects($this->once())
             ->method('bindParameters')
             ->with($datagrid, $parameters, $append);
-
+        $this->processor
+            ->expects($this->once())
+            ->method('processQuery')
+            ->willReturn($qb);
         $this->datasource->process($datagrid, $configs);
         $this->datasource->bindParameters($parameters, $append);
     }

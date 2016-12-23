@@ -51,7 +51,7 @@ define([
         simpleBaseMarkup: '<div class="more-bar-holder action-row"></div>',
         /** @property */
         closeButtonTemplate: _.template(
-            '<li class="dropdown-close"><i class="icon-remove hide-text">' + _.__('Close') + '</i></li>'
+            '<li class="dropdown-close"><i class="fa-close hide-text">' + _.__('Close') + '</i></li>'
         ),
 
         /** @property */
@@ -85,7 +85,7 @@ define([
             'click': '_showDropdown',
             'mouseover .dropdown-toggle': '_showDropdown',
             'mouseleave .dropdown-menu, .dropdown-menu__placeholder': '_hideDropdown',
-            'click .dropdown-close .icon-remove': '_hideDropdown'
+            'click .dropdown-close .fa-close': '_hideDropdown'
         },
 
         /**
@@ -142,28 +142,30 @@ define([
         createActions: function() {
             var result = [];
             var actions = this.column.get('actions');
-            var config = this.model.get('action_configuration');
+            var config = this.model.get('action_configuration') || {};
 
             _.each(actions, function(action, name) {
                 // filter available actions for current row
                 if (!config || config[name] !== false) {
-                    result.push(this.createAction(action));
+                    result.push(this.createAction(action, config[name] || {}));
                 }
             }, this);
 
-            return result;
+            return _.sortBy(result, 'order');
         },
 
         /**
          * Creates action
          *
          * @param {Function} Action
+         * @param {Object} configuration
          * @protected
          */
-        createAction: function(Action) {
+        createAction: function(Action, configuration) {
             return new Action({
                 model: this.model,
-                datagrid: this.column.get('datagrid')
+                datagrid: this.column.get('datagrid'),
+                configuration: configuration
             });
         },
 

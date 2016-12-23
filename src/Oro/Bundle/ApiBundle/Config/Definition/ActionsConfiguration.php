@@ -35,6 +35,13 @@ class ActionsConfiguration extends AbstractConfigurationSection
         /** @var NodeBuilder $actionNode */
         $actionNode = $node->end()
             ->useAttributeAsKey('name')
+            ->beforeNormalization()
+                ->always(function ($value) {
+                    return false === $value
+                        ? array_fill_keys($this->permissibleActions, false)
+                        : $value;
+                })
+            ->end()
             ->validate()
                 ->always(function ($value) {
                     $unknownActions = array_diff(array_keys($value), $this->permissibleActions);
@@ -104,6 +111,7 @@ class ActionsConfiguration extends AbstractConfigurationSection
             ->booleanNode(ActionConfig::DISABLE_SORTING)->end()
             ->booleanNode(ActionConfig::DISABLE_INCLUSION)->end()
             ->booleanNode(ActionConfig::DISABLE_FIELDSET)->end()
+            ->booleanNode(ActionConfig::DISABLE_META_PROPERTIES)->end()
             ->scalarNode(ActionConfig::FORM_TYPE)->end()
             ->arrayNode(ActionConfig::FORM_OPTIONS)
                 ->useAttributeAsKey('name')

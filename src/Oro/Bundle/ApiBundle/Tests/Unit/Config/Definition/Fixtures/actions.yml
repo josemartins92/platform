@@ -12,6 +12,34 @@ null_actions:
         actions: ~
     expected: []
 
+exclude_all_actions:
+    config:
+        actions: false
+    expected:
+        actions:
+            get:
+                exclude: true
+            get_list:
+                exclude: true
+            update:
+                exclude: true
+            create:
+                exclude: true
+            delete:
+                exclude: true
+            delete_list:
+                exclude: true
+            get_subresource:
+                exclude: true
+            get_relationship:
+                exclude: true
+            update_relationship:
+                exclude: true
+            add_relationship:
+                exclude: true
+            delete_relationship:
+                exclude: true
+
 description:
     config:
         actions:
@@ -314,6 +342,34 @@ invalid_value_for_disable_fieldset:
                 disable_fieldset: 123
     expected: []
     error: 'Invalid type for path "entity.actions.get_list.disable_fieldset". Expected boolean, but got integer'
+
+enable_meta_properties:
+    config:
+        actions:
+            get_list:
+                disable_meta_properties: false
+    expected:
+        actions:
+            get_list:
+                disable_meta_properties: false
+
+disable_meta_properties:
+    config:
+        actions:
+            get_list:
+                disable_meta_properties: true
+    expected:
+        actions:
+            get_list:
+                disable_meta_properties: true
+
+invalid_value_for_disable_meta_properties:
+    config:
+        actions:
+            get_list:
+                disable_meta_properties: 123
+    expected: []
+    error: 'Invalid type for path "entity.actions.get_list.disable_meta_properties". Expected boolean, but got integer'
 
 null_status_codes:
     config:

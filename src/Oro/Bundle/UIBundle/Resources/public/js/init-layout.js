@@ -45,7 +45,7 @@ require(['jquery', 'underscore', 'orotranslation/js/translator', 'oroui/js/tools
 
     $(function() {
         var $pageTitle = $('#page-title');
-        if ($pageTitle.size()) {
+        if ($pageTitle.length) {
             document.title = $('<div.>').html($('#page-title').text()).text();
         }
         layout.hideProgressBar();
@@ -186,14 +186,28 @@ require(['jquery', 'underscore', 'orotranslation/js/translator', 'oroui/js/tools
             if ($target.is('.dropdown, .dropup, .oro-drop')) {
                 clickingTarget = $target;
             } else {
-                clickingTarget = $target.closest('.dropdown, .dropup, .oro-drop');
+                clickingTarget = $target.parents('.dropdown, .dropup, .oro-drop');
             }
             $(openDropdownsSelector).filter(function() {
                 return !$(this).has(document.activeElement).length;
             }).not(clickingTarget).trigger('tohide.bs.dropdown');
         }, true);
 
-        $('#main-menu').mouseover(function() {
+        var mainMenu = $('#main-menu');
+        var activeDropdownsSelector = $('.dropdown, .dropup, .oro-drop', mainMenu);
+
+        // trigger refresh of current page if active dropdown is clicked, despite the Backbone router limitations
+        $(activeDropdownsSelector).on('click', $('li.active a'), function(e) {
+            var $target = $(e.target).closest('a');
+            if (!$target.hasClass('unclickable') && $target[0] !== undefined && 'pathname' in $target[0]) {
+                if (mediator.execute('compareUrl', $target[0].pathname)) {
+                    mediator.execute('refreshPage');
+                    return false;
+                }
+            }
+        });
+
+        mainMenu.mouseover(function() {
             $(openDropdownsSelector).trigger('tohide.bs.dropdown');
         });
 
@@ -233,6 +247,18 @@ require(['jquery', 'underscore', 'orotranslation/js/translator', 'oroui/js/tools
     //@TODO should be refactored in BAP-4020
     $(function() {
         var adjustHeight;
+        var anchor = $('#bottom-anchor');
+        if (!anchor.length) {
+            anchor = $('<div id="bottom-anchor"/>')
+                .css({
+                    position: 'fixed',
+                    bottom: '0',
+                    left: '0',
+                    width: '1px',
+                    height: '1px'
+                })
+                .appendTo($(document.body));
+        }
 
         if (tools.isMobile()) {
             adjustHeight = function() {
@@ -241,7 +267,6 @@ require(['jquery', 'underscore', 'orotranslation/js/translator', 'oroui/js/tools
             };
         } else {
             /* dynamic height for central column */
-            var anchor = $('#bottom-anchor');
             var content = false;
 
             var initializeContent = function() {
@@ -297,18 +322,6 @@ require(['jquery', 'underscore', 'orotranslation/js/translator', 'oroui/js/tools
 
                 mediator.trigger('layout:reposition');
             };
-
-            if (!anchor.length) {
-                anchor = $('<div id="bottom-anchor"/>')
-                    .css({
-                        position: 'fixed',
-                        bottom: '0',
-                        left: '0',
-                        width: '1px',
-                        height: '1px'
-                    })
-                    .appendTo($(document.body));
-            }
         }
 
         var adjustReloaded = function() {
@@ -344,10 +357,24 @@ require(['jquery', 'underscore', 'orotranslation/js/translator', 'oroui/js/tools
         $(document).on('click', '.remove-button', function(e) {
             var el = $(this);
             if (!(el.is('[disabled]') || el.hasClass('disabled'))) {
-                var message = el.data('message');
-                var confirm = new DeleteConfirmation({
-                    content: message
-                });
+                var data = {content: el.data('message')};
+
+                var okText = el.data('ok-text');
+                if (okText) {
+                    data.okText = okText;
+                }
+
+                var title = el.data('title');
+                if (title) {
+                    data.title = title;
+                }
+
+                var cancelText = el.data('cancel-text');
+                if (cancelText) {
+                    data.cancelText = cancelText;
+                }
+
+                var confirm = new DeleteConfirmation(data);
 
                 confirm.on('ok', function() {
                     mediator.execute('showLoading');

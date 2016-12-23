@@ -84,15 +84,13 @@ class LocalizationSelectionTypeTest extends FormIntegrationTestCase
     public function testConfigureOptions()
     {
         /* @var $resolver OptionsResolver|\PHPUnit_Framework_MockObject_MockObject */
-        $resolver = $this->getMock(OptionsResolver::class);
+        $resolver = $this->createMock(OptionsResolver::class);
         $resolver->expects($this->once())
             ->method('setDefaults')
             ->with([
                 'choices' => function () {
                 },
                 'compact' => false,
-                'localizations_list' => null,
-                'additional_localizations' => null,
                 'full_localization_list' => null,
             ]);
 

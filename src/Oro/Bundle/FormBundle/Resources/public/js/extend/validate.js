@@ -4,7 +4,7 @@ define([
     'orotranslation/js/translator',
     'oroui/js/tools',
     'oroui/js/tools/logger',
-    'oroform/js/optional-validation-handler',
+    'oroform/js/optional-validation-groups-handler',
     'jquery.validate'
 ], function($, _, __, tools, logger, validationHandler) {
     'use strict';
@@ -25,8 +25,8 @@ define([
         if (validator instanceof $.validator) {
             return _.filter($el.add($el.parentsUntil(form)).add(form).toArray(), function(el) {
                 var $el = $(el);
-                // is it current element or first in a group of elements
-                return $el.data('validation') && ($el.is(element) || validator.elementsOf($el).first().is(element));
+                // is it current element or the validated input is among the elements of the current collection
+                return $el.data('validation') && ($el.is(element) || validator.elementsOf($el).has(element));
             });
         } else {
             return [];
@@ -141,6 +141,25 @@ define([
         return this;
     };
 
+    $.validator.prototype.check = _.wrap($.validator.prototype.check, function(check, element) {
+        if (!element.name) {
+            // add temporary elements names to support validation for frontend elements
+            element.name = _.uniqueId('temp-validation-name-');
+        }
+        return check.call(this, element);
+    });
+
+    $.validator.prototype.valid = _.wrap($.validator.prototype.valid, function(valid) {
+        var isValid = valid.call(this);
+        if (isValid) {
+            // remove temporary elements names in case valid form, before form submit
+            $(this.currentForm)
+                .find('[name^="temp-validation-name-"]')
+                .each(function() {$(this).removeAttr('name');});
+        }
+        return isValid;
+    });
+
     $.validator.prototype.elements = _.wrap($.validator.prototype.elements, function(func) {
         var $additionalElements = $(this.currentForm).find(':input[data-validate-element]');
         return func.apply(this, _.rest(arguments)).add($additionalElements);
@@ -198,7 +217,22 @@ define([
      */
     $.validator.prototype.init = _.wrap($.validator.prototype.init, function(init) {
         validationHandler.initialize($(this.currentForm));
-        init.apply(this, arguments);
+        var validator = this;
+
+        $(this.currentForm).on('content:changed', function(event) {
+            validationHandler.initializeOptionalValidationGroupHandlers($(event.target));
+        }).on('disabled', function(e) {
+            validator.hideElementErrors(e.target);
+        });
+
+        init.apply(this, _.rest(arguments));
+        // defer used there since `elements` method expects form has validator object that is created here
+        _.defer(_.bind(this.collectPristineValues, this));
+    });
+
+    $.validator.prototype.resetForm = _.wrap($.validator.prototype.resetForm, function(resetForm) {
+        resetForm.apply(this, _.rest(arguments));
+        this.collectPristineValues();
     });
 
     /**
@@ -252,6 +286,19 @@ define([
         })(errors);
 
         this.showErrors(result);
+    };
+
+    $.validator.prototype.collectPristineValues = function() {
+        this.pristineValues = {};
+        this.elements().each(_.bind(function(index, element) {
+            if (!this.checkable(element)) {
+                this.pristineValues[element.name] = element.value;
+            }
+        }, this));
+    };
+
+    $.validator.prototype.isPristine = function(element) {
+        return this.pristineValues[element.name] === element.value;
     };
 
     /**
@@ -310,7 +357,7 @@ define([
         // ignore all invisible elements except input type=hidden
         ignore: ':hidden:not([type=hidden])',
         onfocusout: function(element, event) {
-            if (!this.checkable(element)) {
+            if (!$(element).is(':disabled') && !this.checkable(element) && !this.isPristine(element)) {
                 this.element(element);
             }
         },
@@ -371,7 +418,8 @@ define([
                     var isValidFound = false;
                     var isInvalidFound = false;
                     _.each(validator.elementsOf(optionalGroup), function(elem) {
-                        if ($(elem).prop('willValidate')) {
+                        var $element = $(elem);
+                        if ($element.prop('willValidate') && !$element.data('ignore-validation')) {
                             if ($.validator.methods.required.call(validator, validator.elementValue(elem), elem)) {
                                 isValidFound = true;
                             } else {

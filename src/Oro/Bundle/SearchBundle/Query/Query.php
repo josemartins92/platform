@@ -25,6 +25,7 @@ class Query
     const KEYWORD_OFFSET      = 'offset';
     const KEYWORD_MAX_RESULTS = 'max_results';
     const KEYWORD_ORDER_BY    = 'order_by';
+    const KEYWORD_AS          = 'as';
 
     const OPERATOR_EQUALS              = '=';
     const OPERATOR_NOT_EQUALS          = '!=';
@@ -36,6 +37,9 @@ class Query
     const OPERATOR_NOT_CONTAINS        = '!~';
     const OPERATOR_IN                  = 'in';
     const OPERATOR_NOT_IN              = '!in';
+    const OPERATOR_STARTS_WITH         = 'starts_with';
+    const OPERATOR_EXISTS              = 'exists';
+    const OPERATOR_NOT_EXISTS          = 'notexists';
 
     const TYPE_TEXT     = 'text';
     const TYPE_INTEGER  = 'integer';
@@ -58,6 +62,9 @@ class Query
 
     /** @var array */
     protected $fields;
+
+    /** @var array */
+    protected $selectAliases = [];
 
     /** @var Criteria */
     protected $criteria;
@@ -132,28 +139,6 @@ class Query
     }
 
     /**
-     * @param ObjectManager $em
-     */
-    public function setEntityManager(ObjectManager $em)
-    {
-        $this->em = $em;
-    }
-
-    /**
-     * Init query
-     *
-     * @param string $query
-     *
-     * @return Query
-     */
-    public function createQuery($query)
-    {
-        $this->query = $query;
-
-        return $this;
-    }
-
-    /**
      * Insert list of required fields to query select
      *
      * @param mixed  $field
@@ -164,7 +149,7 @@ class Query
      */
     public function select($field, $enforcedFieldType = null)
     {
-        $this->select = [];
+        $this->select = $this->selectAliases = [];
 
         if (is_array($field)) {
             foreach ($field as $_field) {
@@ -180,42 +165,23 @@ class Query
     }
 
     /**
-     * @param string $fieldName
-     * @param string $enforcedFieldType
-     * @return $this
+     * {@inheritdoc}
      */
-    public function addSelect($fieldName, $enforcedFieldType = null)
+    public function addSelect($fieldNames, $enforcedFieldType = null)
     {
-        $fieldType = self::TYPE_TEXT;
+        if ($fieldNames) {
+            foreach ((array)$fieldNames as $fieldName) {
+                $fieldName = $this->parseFieldAliasing($fieldName, $enforcedFieldType);
 
-        list($explodedType, $explodedName) = Criteria::explodeFieldTypeName($fieldName);
-
-        if (!empty($explodedType) && !empty($explodedName)) {
-            $fieldType = $explodedType;
-            $fieldName = $explodedName;
+                $this->addToSelect($fieldName, $enforcedFieldType);
+            }
         }
-
-        if ($enforcedFieldType !== null) {
-            $fieldType = $enforcedFieldType;
-        }
-
-        $field = Criteria::implodeFieldTypeName($fieldType, $fieldName);
-
-        if (!is_string($field)) {
-            return $this;
-        }
-
-        $this->select[$field] = $field; // do not allow repeating fields
 
         return $this;
     }
 
     /**
-     * Insert entities array to query from
-     *
-     * @param array|string $entities
-     *
-     * @return Query
+     * {@inheritdoc}
      */
     public function from($entities)
     {
@@ -312,6 +278,9 @@ class Query
             case self::OPERATOR_NOT_IN:
                 $expr = $expr->notIn($fieldName, $fieldValue);
                 break;
+            case self::OPERATOR_STARTS_WITH:
+                $expr = $expr->startsWith($fieldName, $fieldValue);
+                break;
             default:
                 throw new ExpressionSyntaxError(
                     sprintf('Unsupported operator "%s"', $condition)
@@ -334,9 +303,7 @@ class Query
      */
     public function getSelect()
     {
-        $result = array_values($this->select);
-
-        return $result;
+        return array_values($this->select);
     }
 
     /**
@@ -357,7 +324,7 @@ class Query
      */
     public function getOptions()
     {
-        throw new \Exception('Method getOptions is depricated for Query class. Please use getCriteria method');
+        throw new \Exception('Method getOptions is deprecated for Query class. Please use getCriteria method');
     }
 
     /**
@@ -575,6 +542,82 @@ class Query
     }
 
     /**
+     * @return array
+     */
+    public function getSelectAliases()
+    {
+        return $this->selectAliases;
+    }
+
+    /**
+     * Returns a combination of getSelect() and getSelectAlias().
+     * Returns an array of fields that will be returned in the
+     * dataset.
+     *
+     * @return array
+     */
+    public function getSelectDataFields()
+    {
+        if (empty($this->select)) {
+            return [];
+        }
+
+        $aliases = $this->selectAliases;
+        $result  = [];
+
+        foreach ($this->select as $select) {
+            list ($fieldType, $fieldName) = Criteria::explodeFieldTypeName($select);
+            if (isset($aliases[$fieldName])) {
+                $resultName = $aliases[$fieldName];
+            } elseif (isset($aliases[$select])) {
+                $resultName = $aliases[$select];
+            } else {
+                $resultName = $fieldName;
+            }
+
+            $result[$select] = $resultName;
+        }
+
+        return $result;
+    }
+
+
+    /**
+     * @param      $fieldName
+     * @param null $enforcedFieldType
+     * @return $this
+     */
+    private function addToSelect($fieldName, $enforcedFieldType = null)
+    {
+        if (!$fieldName) {
+            return $this;
+        }
+
+        $fieldType = self::TYPE_TEXT;
+
+        list($explodedType, $explodedName) = Criteria::explodeFieldTypeName($fieldName);
+
+        if (!empty($explodedType) && !empty($explodedName)) {
+            $fieldType = $explodedType;
+            $fieldName = $explodedName;
+        }
+
+        if ($enforcedFieldType !== null) {
+            $fieldType = $enforcedFieldType;
+        }
+
+        $field = Criteria::implodeFieldTypeName($fieldType, $fieldName);
+
+        if (!is_string($field)) {
+            return $this;
+        }
+
+        $this->select[$field] = $field; // do not allow repeating fields
+
+        return $this;
+    }
+
+    /**
      * Returns the WHERE string part for getStringQuery.
      *
      * @return string
@@ -648,5 +691,41 @@ class Query
         }
 
         return $fields;
+    }
+
+    /**
+     * Parse field name and check if there is an alias declared in it.
+     *
+     * @param string $field
+     * @param string|null
+     * @return string
+     */
+    private function parseFieldAliasing($field, $enforcedFieldType = null)
+    {
+        $part = strrev(trim($field));
+        $part = preg_split('/ sa /im', $part, 2);
+
+        if (count($part) > 1) {
+            // splitting with ' ' and taking first word as a field name - does not allow spaces in field name
+            $rev   = strrev($part[1]);
+            $rev   = explode(' ', $rev);
+            $field = array_shift($rev);
+
+            list($explodedType, $explodedName) = Criteria::explodeFieldTypeName($field);
+            if (!$explodedType) {
+                if ($enforcedFieldType) {
+                    $explodedType = $enforcedFieldType;
+                } else {
+                    $explodedType = self::TYPE_TEXT;
+                }
+            }
+            $field = Criteria::implodeFieldTypeName($explodedType, $explodedName);
+
+            $alias = strrev($part[0]);
+
+            $this->selectAliases[$field] = $alias;
+        }
+
+        return $field;
     }
 }

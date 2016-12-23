@@ -12,7 +12,7 @@ use Oro\Bundle\ActionBundle\Model\Operation;
 use Oro\Bundle\ActionBundle\Model\OperationManager;
 use Oro\Bundle\ActionBundle\Form\Type\OperationType;
 
-use Oro\Component\Action\Model\ContextAccessor;
+use Oro\Component\ConfigExpression\ContextAccessor;
 use Oro\Component\Testing\Unit\FormIntegrationTestCase;
 
 class OperationTypeTest extends FormIntegrationTestCase
@@ -212,7 +212,8 @@ class OperationTypeTest extends FormIntegrationTestCase
      */
     public function testException(array $options, $exception, $message, ActionData $data = null)
     {
-        $this->setExpectedException($exception, $message);
+        $this->expectException($exception);
+        $this->expectExceptionMessage($message);
 
         $this->factory->create($this->formType, $data, $options);
     }
@@ -274,8 +275,7 @@ class OperationTypeTest extends FormIntegrationTestCase
         $actionData = new ActionData($data);
 
         if ($modified) {
-            $actionData->modifiedData = null;
-            unset($actionData->modifiedData);
+            $actionData->setModified(true);
         }
 
         return $actionData;

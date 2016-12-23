@@ -7,7 +7,7 @@ define(function(require) {
     var moment = require('moment');
     var datetimeFormatter = require('orolocale/js/formatter/datetime');
     var localeSettings = require('orolocale/js/locale-settings');
-    require('oroui/lib/jquery.timepicker-1.4.13/jquery.timepicker');
+    require('jquery.timepicker');
 
     var TIMEPICKER_DROPDOWN_CLASS_NAME = 'timepicker-dialog-is-below';
     var TIMEPICKER_DROPUP_CLASS_NAME = 'timepicker-dialog-is-above';
@@ -97,7 +97,8 @@ define(function(require) {
             if (options.fieldsWrapper) {
                 this.$frontDateField
                     .wrap(options.fieldsWrapper)
-                    .data('isWrapped', true);
+                    .data('isWrapped', true)
+                    .before(this.$el);
             }
             this.$frontTimeField = $('<input />');
             options.timeInputAttrs.type = this.nativeMode ? 'time' : 'text';
@@ -146,6 +147,11 @@ define(function(require) {
             this._super().initPickerWidget.apply(this, arguments);
         },
 
+        setDisabled: function(disabled) {
+            this.$frontTimeField.prop('disabled', disabled).trigger(disabled ? 'disabled' : 'enabled');
+            this._super().setDisabled.apply(this, arguments);
+        },
+
         /**
          * Returns timepicker popup
          *
@@ -159,6 +165,9 @@ define(function(require) {
          * Destroys picker widget
          */
         destroyTimePickerWidget: function() {
+            // this will trigger hide event before remove
+            // that is not done by default implementation
+            this.$frontTimeField.timepicker('hide');
             this.$frontTimeField.timepicker('remove');
         },
 

@@ -119,14 +119,16 @@ class DataTransformerEntitySerializerTest extends EntitySerializerTestCase
             [1 => \PDO::PARAM_INT]
         );
 
-        $transformer = $this->getMock('Oro\Component\EntitySerializer\DataTransformerInterface');
+        $context = ['key' => 'context value'];
+        $transformer = $this->createMock('Oro\Component\EntitySerializer\DataTransformerInterface');
         $transformer->expects($this->once())
             ->method('transform')
             ->with(
                 'Oro\Component\EntitySerializer\Tests\Unit\Fixtures\Entity\Group',
                 'name',
                 'group_name',
-                ['data_transformer' => ['data_transformer_service_id']]
+                ['data_transformer' => ['data_transformer_service_id']],
+                $context
             )
             ->willReturn('transformed_group_name');
 
@@ -145,7 +147,8 @@ class DataTransformerEntitySerializerTest extends EntitySerializerTestCase
                         'data_transformer' => 'data_transformer_service_id'
                     ],
                 ],
-            ]
+            ],
+            $context
         );
 
         $this->assertArrayEquals(
@@ -180,7 +183,7 @@ class DataTransformerEntitySerializerTest extends EntitySerializerTestCase
             [1 => \PDO::PARAM_INT]
         );
 
-        $transformer = $this->getMock('Symfony\Component\Form\DataTransformerInterface');
+        $transformer = $this->createMock('Symfony\Component\Form\DataTransformerInterface');
         $transformer->expects($this->once())
             ->method('transform')
             ->with('group_name')
@@ -215,6 +218,55 @@ class DataTransformerEntitySerializerTest extends EntitySerializerTestCase
         );
     }
 
+    public function testDataTransformerAsClosure()
+    {
+        $qb = $this->em->getRepository('Test:Group')->createQueryBuilder('e')
+            ->where('e.id = :id')
+            ->setParameter('id', 1);
+
+        $this->setQueryExpectation(
+            $this->getDriverConnectionMock($this->em),
+            'SELECT g0_.id AS id_0, g0_.name AS name_1'
+            . ' FROM group_table g0_'
+            . ' WHERE g0_.id = ?',
+            [
+                [
+                    'id_0'   => 1,
+                    'name_1' => 'group_name',
+                ]
+            ],
+            [1 => 1],
+            [1 => \PDO::PARAM_INT]
+        );
+
+        $context = ['key' => 'context value'];
+        $result = $this->serializer->serialize(
+            $qb,
+            [
+                'exclusion_policy' => 'all',
+                'fields'           => [
+                    'id'   => null,
+                    'name' => [
+                        'data_transformer' => function ($class, $property, $value, array $config, array $context) {
+                            return sprintf('transformed_group_name[%s]', $context['key']);
+                        }
+                    ],
+                ],
+            ],
+            $context
+        );
+
+        $this->assertArrayEquals(
+            [
+                [
+                    'id'   => 1,
+                    'name' => 'transformed_group_name[context value]',
+                ]
+            ],
+            $result
+        );
+    }
+
     public function testDataTransformerForRenamingField()
     {
         $qb = $this->em->getRepository('Test:Group')->createQueryBuilder('e')
@@ -236,14 +288,15 @@ class DataTransformerEntitySerializerTest extends EntitySerializerTestCase
             [1 => \PDO::PARAM_INT]
         );
 
-        $transformer = $this->getMock('Oro\Component\EntitySerializer\DataTransformerInterface');
+        $transformer = $this->createMock('Oro\Component\EntitySerializer\DataTransformerInterface');
         $transformer->expects($this->once())
             ->method('transform')
             ->with(
                 'Oro\Component\EntitySerializer\Tests\Unit\Fixtures\Entity\Group',
                 'name',
                 'group_name',
-                ['data_transformer' => ['data_transformer_service_id']]
+                ['data_transformer' => ['data_transformer_service_id']],
+                []
             )
             ->willReturn('transformed_group_name');
 
@@ -307,14 +360,15 @@ class DataTransformerEntitySerializerTest extends EntitySerializerTestCase
             [1 => \PDO::PARAM_INT]
         );
 
-        $transformer = $this->getMock('Oro\Component\EntitySerializer\DataTransformerInterface');
+        $transformer = $this->createMock('Oro\Component\EntitySerializer\DataTransformerInterface');
         $transformer->expects($this->once())
             ->method('transform')
             ->with(
                 'Oro\Component\EntitySerializer\Tests\Unit\Fixtures\Entity\User',
                 'name',
                 'user_name',
-                ['data_transformer' => ['data_transformer_service_id']]
+                ['data_transformer' => ['data_transformer_service_id']],
+                []
             )
             ->willReturn('transformed_user_name');
 

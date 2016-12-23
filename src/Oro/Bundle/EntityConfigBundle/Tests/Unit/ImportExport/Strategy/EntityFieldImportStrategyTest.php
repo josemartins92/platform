@@ -5,6 +5,7 @@ namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\ImportExport\Strategy;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\Translation\TranslatorInterface;
 
+use Oro\Bundle\EntityBundle\Helper\FieldHelper;
 use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
 use Oro\Bundle\EntityConfigBundle\ImportExport\Strategy\EntityFieldImportStrategy;
@@ -12,7 +13,6 @@ use Oro\Bundle\EntityExtendBundle\Provider\FieldTypeProvider;
 use Oro\Bundle\FormBundle\Validator\ConstraintFactory;
 use Oro\Bundle\ImportExportBundle\Context\ContextInterface;
 use Oro\Bundle\ImportExportBundle\Field\DatabaseHelper;
-use Oro\Bundle\ImportExportBundle\Field\FieldHelper;
 use Oro\Bundle\ImportExportBundle\Strategy\Import\ImportStrategyHelper;
 
 class EntityFieldImportStrategyTest extends \PHPUnit_Framework_TestCase
@@ -52,7 +52,7 @@ class EntityFieldImportStrategyTest extends \PHPUnit_Framework_TestCase
             ->method('getFieldProperties')
             ->willReturn([]);
 
-        $this->translator = $this->getMock('Symfony\Component\Translation\TranslatorInterface');
+        $this->translator = $this->createMock('Symfony\Component\Translation\TranslatorInterface');
         $this->translator
             ->expects(static::any())
             ->method('trans')
@@ -63,7 +63,7 @@ class EntityFieldImportStrategyTest extends \PHPUnit_Framework_TestCase
             );
 
         /** @var FieldHelper $fieldHelper */
-        $this->fieldHelper = $this->getMockBuilder('Oro\Bundle\ImportExportBundle\Field\FieldHelper')
+        $this->fieldHelper = $this->getMockBuilder('Oro\Bundle\EntityBundle\Helper\FieldHelper')
             ->disableOriginalConstructor()
             ->getMock();
 
@@ -80,7 +80,7 @@ class EntityFieldImportStrategyTest extends \PHPUnit_Framework_TestCase
         $this->strategy = $this->createStrategy();
 
         /** @var ContextInterface $context */
-        $context = $this->getMock('Oro\Bundle\ImportExportBundle\Context\ContextInterface');
+        $context = $this->createMock('Oro\Bundle\ImportExportBundle\Context\ContextInterface');
         $this->strategy->setImportExportContext($context);
         $this->strategy->setEntityName('Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel');
         $this->strategy->setFieldTypeProvider($this->fieldTypeProvider);
@@ -98,7 +98,7 @@ class EntityFieldImportStrategyTest extends \PHPUnit_Framework_TestCase
     public function testSetConstraintFactory()
     {
         /** @var ConstraintFactory $factory */
-        $factory = $this->getMock('Oro\Bundle\FormBundle\Validator\ConstraintFactory');
+        $factory = $this->createMock('Oro\Bundle\FormBundle\Validator\ConstraintFactory');
         $strategy = $this->createStrategy();
         static::assertNull($this->getProperty($strategy, 'constraintFactory'));
         $strategy->setConstraintFactory($factory);

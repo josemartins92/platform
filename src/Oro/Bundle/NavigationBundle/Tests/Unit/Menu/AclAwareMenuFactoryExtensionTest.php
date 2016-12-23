@@ -3,9 +3,13 @@
 namespace Oro\Bundle\NavigationBundle\Tests\Unit\Menu;
 
 use Knp\Menu\MenuFactory;
+
+use Oro\Component\DependencyInjection\ServiceLink;
 use Oro\Bundle\NavigationBundle\Menu\AclAwareMenuFactoryExtension;
+
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Routing\Exception\ResourceNotFoundException;
+
 use Doctrine\Common\Cache\CacheProvider;
 
 class AclAwareMenuFactoryExtensionTest extends \PHPUnit_Framework_TestCase
@@ -19,6 +23,11 @@ class AclAwareMenuFactoryExtensionTest extends \PHPUnit_Framework_TestCase
      * @var \PHPUnit_Framework_MockObject_MockObject
      */
     protected $securityFacade;
+
+    /**
+     * @var \PHPUnit_Framework_MockObject_MockObject
+     */
+    protected $securityFacadeLink;
 
     /**
      * @var MenuFactory
@@ -57,11 +66,38 @@ class AclAwareMenuFactoryExtensionTest extends \PHPUnit_Framework_TestCase
         $this->securityFacade
             ->expects($this->any())
             ->method('getToken')
-            ->willReturn($this->getMock('Symfony\Component\Security\Core\Authentication\Token\TokenInterface'));
+            ->willReturn($this->createMock('Symfony\Component\Security\Core\Authentication\Token\TokenInterface'));
 
-        $this->factoryExtension = new AclAwareMenuFactoryExtension($this->router, $this->securityFacade);
+        $this->factoryExtension = new AclAwareMenuFactoryExtension(
+            $this->router,
+            $this->getSecurityFacadeLink($this->securityFacade)
+        );
+
         $this->factory = new MenuFactory();
         $this->factory->addExtension($this->factoryExtension);
+    }
+
+    /**
+     * @param \PHPUnit_Framework_MockObject_MockObject $securityFacade
+     *
+     * @return \PHPUnit_Framework_MockObject_MockObject
+     */
+    protected function getSecurityFacadeLink(\PHPUnit_Framework_MockObject_MockObject $securityFacade)
+    {
+        /**
+         * @var ServiceLink
+         */
+        $securityFacadeLink = $this
+            ->getMockBuilder('Oro\Component\DependencyInjection\ServiceLink')
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $securityFacadeLink
+            ->expects($this->any())
+            ->method('getService')
+            ->willReturn($securityFacade);
+
+        return $securityFacadeLink;
     }
 
     /**
@@ -73,7 +109,7 @@ class AclAwareMenuFactoryExtensionTest extends \PHPUnit_Framework_TestCase
     {
         $this->securityFacade->expects($this->once())
             ->method('isGranted')
-            ->with($options['aclResourceId'])
+            ->with($options['acl_resource_id'])
             ->will($this->returnValue($isAllowed));
 
         $item = $this->factory->createItem('test', $options);
@@ -88,35 +124,35 @@ class AclAwareMenuFactoryExtensionTest extends \PHPUnit_Framework_TestCase
     {
         return array(
             'allowed' => array(
-                array('aclResourceId' => 'test'),
+                array('acl_resource_id' => 'test'),
                 true
             ),
             'not allowed' => array(
-                array('aclResourceId' => 'test'),
+                array('acl_resource_id' => 'test'),
                 false
             ),
             'allowed with uri' => array(
-                array('aclResourceId' => 'test', 'uri' => '#'),
+                array('acl_resource_id' => 'test', 'uri' => '#'),
                 true
             ),
             'not allowed with uri' => array(
-                array('aclResourceId' => 'test', 'uri' => '#'),
+                array('acl_resource_id' => 'test', 'uri' => '#'),
                 false
             ),
             'allowed with route' => array(
-                array('aclResourceId' => 'test', 'route' => 'test'),
+                array('acl_resource_id' => 'test', 'route' => 'test'),
                 true
             ),
             'not allowed with route' => array(
-                array('aclResourceId' => 'test', 'route' => 'test'),
+                array('acl_resource_id' => 'test', 'route' => 'test'),
                 false
             ),
             'allowed with route and uri' => array(
-                array('aclResourceId' => 'test', 'uri' => '#', 'route' => 'test'),
+                array('acl_resource_id' => 'test', 'uri' => '#', 'route' => 'test'),
                 true
             ),
             'not allowed with route and uri' => array(
-                array('aclResourceId' => 'test', 'uri' => '#', 'route' => 'test'),
+                array('acl_resource_id' => 'test', 'uri' => '#', 'route' => 'test'),
                 false
             ),
         );
@@ -138,7 +174,11 @@ class AclAwareMenuFactoryExtensionTest extends \PHPUnit_Framework_TestCase
             ->method('hasLoggedUser')
             ->willReturn(false);
 
-        $factoryExtension = new AclAwareMenuFactoryExtension($this->router, $securityFacade);
+        $factoryExtension = new AclAwareMenuFactoryExtension(
+            $this->router,
+            $this->getSecurityFacadeLink($securityFacade)
+        );
+
         $factory = new MenuFactory();
         $factory->addExtension($factoryExtension);
 
@@ -155,7 +195,7 @@ class AclAwareMenuFactoryExtensionTest extends \PHPUnit_Framework_TestCase
     {
         return array(
             'show non authorized' => array(
-                array('extras' => array('showNonAuthorized' => true)),
+                array('extras' => array('show_non_authorized' => true)),
                 true,
             ),
             'do not show non authorized' => array(
@@ -372,10 +412,10 @@ class AclAwareMenuFactoryExtensionTest extends \PHPUnit_Framework_TestCase
 
     public function testAclCacheByResourceId()
     {
-        $options = array('aclResourceId' => 'resource_id');
+        $options = array('acl_resource_id' => 'resource_id');
         $this->securityFacade->expects($this->once())
             ->method('isGranted')
-            ->with($options['aclResourceId'])
+            ->with($options['acl_resource_id'])
             ->will($this->returnValue(true));
 
         for ($i = 0; $i < 2; $i++) {
@@ -385,7 +425,7 @@ class AclAwareMenuFactoryExtensionTest extends \PHPUnit_Framework_TestCase
         }
 
         $this->assertAttributeCount(1, 'aclCache', $this->factoryExtension);
-        $this->assertAttributeEquals(array($options['aclResourceId'] => true), 'aclCache', $this->factoryExtension);
+        $this->assertAttributeEquals(array($options['acl_resource_id'] => true), 'aclCache', $this->factoryExtension);
     }
 
     public function testAclCacheByKey()
@@ -452,7 +492,6 @@ class AclAwareMenuFactoryExtensionTest extends \PHPUnit_Framework_TestCase
         $item = $this->factory->createItem('test', $options);
         $this->assertTrue($item->getExtra('isAllowed'));
         $this->assertInstanceOf('Knp\Menu\MenuItem', $item);
-
     }
 
     /**
@@ -512,7 +551,6 @@ class AclAwareMenuFactoryExtensionTest extends \PHPUnit_Framework_TestCase
         $item = $this->factory->createItem('test', $options);
         $this->assertTrue($item->getExtra('isAllowed'));
         $this->assertInstanceOf('Knp\Menu\MenuItem', $item);
-
     }
 
     /**

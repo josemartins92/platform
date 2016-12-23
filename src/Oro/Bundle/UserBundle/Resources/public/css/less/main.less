@@ -9,8 +9,16 @@
   padding: 4px 12px;
 }
 
-form.change-password-form span.icon-eye-close, form.change-password-form span.icon-eye-open {
-  padding-left: 5px;
+form.change-password-form {
+  .controls {
+    position: relative;
+  }
+  span.fa-eye-slash,
+  span.fa-eye {
+    left: 300px;
+    position: absolute;
+    top: 6px;
+  }
 }
 
 .mobile-version {

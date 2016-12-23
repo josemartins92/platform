@@ -98,7 +98,7 @@ class OroNavigationExtensionTest extends \PHPUnit_Framework_TestCase
 
         $settings = array(
             'resolved' => true,
-            'maxItems' => array(
+            'max_items' => array(
                 'value' => 20,
                 'scope' => 'app'
             ),
@@ -190,17 +190,26 @@ class OroNavigationExtensionTest extends \PHPUnit_Framework_TestCase
                 ),
                 'expectedMenu' => array(
                     'items' => array(
-                        'customers_tab' => array_merge(array('label' => 'Customers'), $defaultItemParameters),
+                        'customers_tab' => array_merge(
+                            array('label' => 'Customers', 'read_only' => true),
+                            $defaultItemParameters
+                        ),
                         'call_list' => array_merge(array('label' => 'Calls RENAMED'), $defaultItemParameters),
                         'to_replace' => array_merge(array('label' => 'Replaced'), $defaultItemParameters),
                         'to_move_top' => array_merge(array('label' => 'To move'), $defaultItemParameters),
                         'to_move_child' => array_merge(array('label' => 'To move child'), $defaultItemParameters),
                         'shortcut_call_list' => array_merge(array('label' => 'Show list'), $defaultItemParameters),
+                        'quicklinks_request_quote' => array_merge(
+                            array('label' => 'Request Quote'),
+                            $defaultItemParameters
+                        ),
                         'items_sub2' => array_merge(array('label' => 'Sub2'), $defaultItemParameters)
                     ),
                     'tree' => array(
                         'application_menu' => array(
                             'type' => 'application_menu',
+                            'scope_type' => 'default',
+                            'max_nesting_level' => 1,
                             'children' => array(
                                 'customers_tab' => array(
                                     'children' => array(
@@ -234,8 +243,20 @@ class OroNavigationExtensionTest extends \PHPUnit_Framework_TestCase
                         ),
                         'shortcuts' => array(
                             'type' => 'shortcuts',
+                            'scope_type' => 'custom',
+                            'read_only' => true,
                             'children' => array(
                                 'shortcut_call_list' => array(
+                                    'children' => array(),
+                                    'merge_strategy' => 'append'
+                                )
+                            ),
+                            'extras' => array(),
+                        ),
+                        'quicklinks' => array(
+                            'type' => 'quicklinks',
+                            'children' => array(
+                                'quicklinks_request_quote' => array(
                                     'children' => array(),
                                     'merge_strategy' => 'append'
                                 )
@@ -263,7 +284,7 @@ class OroNavigationExtensionTest extends \PHPUnit_Framework_TestCase
                     )
                 ),
                 'expectedTitles' => array(
-                    'orocrm_call_index' => 'Calls'
+                    'oro_call_index' => 'Calls'
                 )
             )
         );

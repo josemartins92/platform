@@ -9,6 +9,9 @@ use Psr\Log\LoggerInterface;
 use Oro\Bundle\DistributionBundle\Script\Runner;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 
+/**
+ * @group dist
+ */
 class RunnerTest extends WebTestCase
 {
     /**
@@ -223,7 +226,7 @@ class RunnerTest extends WebTestCase
         $logger->expects($this->exactly(2))
             ->method('info');
         $runner = $this->createRunner(null, $logger);
-
+        $runner->timeout = 1200;
         $runner->runPlatformUpdate();
     }
 
@@ -276,7 +279,7 @@ class RunnerTest extends WebTestCase
      */
     protected function createPackageMock()
     {
-        return $this->getMock('Composer\Package\PackageInterface');
+        return $this->createMock('Composer\Package\PackageInterface');
     }
 
     /**
@@ -287,7 +290,7 @@ class RunnerTest extends WebTestCase
      */
     protected function createInstallationManagerMock(PackageInterface $package = null, $targetDir = null)
     {
-        $im = $this->getMock('Composer\Installer\InstallationManager');
+        $im = $this->createMock('Composer\Installer\InstallationManager');
         if ($package) {
             $im->expects($this->any())
                 ->method('getInstallPath')
@@ -318,7 +321,7 @@ class RunnerTest extends WebTestCase
      */
     protected function createLoggerMock()
     {
-        return $this->getMock('Psr\Log\LoggerInterface');
+        return $this->createMock('Psr\Log\LoggerInterface');
     }
 
     /**

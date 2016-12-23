@@ -74,7 +74,7 @@ class DownloadLinksTypeTest extends \PHPUnit_Framework_TestCase
         $this->removeTestDir($testDir);
         mkdir($testDir);
 
-        $form = $this->getMock('Symfony\Component\Form\Test\FormInterface');
+        $form = $this->createMock('Symfony\Component\Form\Test\FormInterface');
         $view = new FormView();
 
         $valueMap = [];
@@ -90,7 +90,6 @@ class DownloadLinksTypeTest extends \PHPUnit_Framework_TestCase
                     ]
                 );
             }
-
         }
         $this->assetHelper->expects($this->exactly(count($files)))->method('getUrl')
             ->willReturnMap($valueMap);

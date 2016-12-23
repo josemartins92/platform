@@ -78,7 +78,7 @@ class LoadAdminUserData extends AbstractFixture implements DependentFixtureInter
             ->addBusinessUnit($businessUnit)
             ->setOrganization($organization)
             ->addOrganization($organization);
-
+        $this->userManager->updatePassword($adminUser);
         $this->userManager->updateUser($adminUser);
     }
 

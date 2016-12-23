@@ -58,7 +58,7 @@ class OroUserBundle implements Migration, ActivityExtensionAwareInterface
 How to make an entity as activity
 ---------------------------------
 
-If you created the new entity and want to make it as the activity you need to make it the extended and include it in `activity` group. To make the entity extended you need create a base abstract class. The name of this class should start with `Extend` word and this class should implement [ActivityInterface](/Model/ActivityInterface.php). An example:
+If you created the new entity and want to make it as the activity you need to make it the extended and include it in `activity` group. To make the entity extended you need create a base abstract class. The name of this class should start with `Extend` word and this class should implement [ActivityInterface](./Model/ActivityInterface.php). An example:
 
 ``` php
 <?php
@@ -107,7 +107,7 @@ Before the new activity entity can be used in ORO platform you need to configure
  - [The activity list section](#how-to-configure-ui-for-activity-list-section)
  - [The add activity button](#how-to-configure-ui-for-activity-button)
 
-Also please take a look at [all configuration options](./Resources/config/entity_config.yml) for the activity scope before you continue reading.
+Also please take a look at [all configuration options](./Resources/config/oro/entity_config.yml) for the activity scope before you continue reading.
 
 ### How to configure UI for activity list section
 
@@ -116,7 +116,7 @@ Please pay attention that:
 
  - The controller action must accept two parameters: `$entityClass` and `$entityId`.
  - The entity class name can be encoded to avoid routing collisions. So you need to use `oro_entity.routing_helper` service to get the entity by it's class name and id.
- - In the following example the `activity-email-grid` datagrid is used to render the list of activities. This grid is defined in *datagrid.yml* file.
+ - In the following example the `activity-email-grid` datagrid is used to render the list of activities. This grid is defined in *datagrids.yml* file.
 
 An example:
 
@@ -188,7 +188,7 @@ activityButton.html.twig
             entityId: entity.id
     }) ,
     'aCss': 'no-hash',
-    'iCss': 'icon-envelope',
+    'iCss': 'fa-envelope',
     'dataId': entity.id,
     'label' : 'oro.email.send_email'|trans,
     'widget' : {
@@ -221,7 +221,7 @@ activityLink.html.twig
             entityId: entity.id
     }),
     'aCss': 'no-hash',
-    'iCss': 'icon-envelope',
+    'iCss': 'fa-envelope',
     'dataId': entity.id,
     'label' : 'oro.email.send_email'|trans,
     'widget' : {
@@ -246,13 +246,14 @@ activityLink.html.twig
 Register these templates in *placeholders.yml*, for example:
 
 ``` yml
-items:
-    oro_send_email_button:
-        template: OroEmailBundle:Email:activityButton.html.twig
-        acl: oro_email_email_create
-    oro_send_email_link:
-        template: OroEmailBundle:Email:activityLink.html.twig
-        acl: oro_email_email_create
+placeholders:
+    items:
+        oro_send_email_button:
+            template: OroEmailBundle:Email:activityButton.html.twig
+            acl: oro_email_email_create
+        oro_send_email_link:
+            template: OroEmailBundle:Email:activityLink.html.twig
+            acl: oro_email_email_create
 ```
 
 Bind items declared in *placeholders.yml* to the activity entity using `action_button_widget` and `action_link_widget` attribute. For example:
@@ -296,3 +297,56 @@ class User extends ExtendUser
 
 This option is used to recognize grid for entity with higher priority than `default` option.
 In cases if these options (`context` or `default`) are not defined for entity, it won`t appear in the context dialog.
+
+
+How to enable contexts column in activity entity grids
+--------------------------------------------------------
+
+For any activity entity grid you are able to include a column that includes all context entities
+
+To do so see the following example of tasks configuration in *datagrid.yml*:
+
+``` yml
+datagrid:
+    tasks-grid:
+        # extension configuration
+        options:
+            contexts:
+                enabled: true          # default `false`
+                column_name: contexts  # optional, column identifier, default is `contexts`
+                entity_name: ~         # optional, set the FQCN of the grid base entity if auto detection fails
+```
+This will create a column named `contexts` and will try to automatically detect the activity class name. If for some reason it fails you can specify a FQCN in the `entity_name` option.
+
+If you wish to configure the column, you are able to do it if you add a section with the name specified in the `column_name` option:
+``` yml
+datagrid:
+    tasks-grid:
+        # column configuration
+        columns:
+             contexts:                      # the column name defined in options
+                label: oro.contexts.label   # optional, default `oro.activity.contexts.column.label`
+                renderable: true            # optional, default `true`
+                ...
+```
+
+Column type is `twig` (unchangeable), so you are also able to specify a `template`.
+
+Default is [OroActivityBundle:Grid:Column/contexts.html.twig](./Resources/views/Grid/Column/contexts.html.twig)
+
+``` twig
+{% for item in value %}
+    {% spaceless %}
+        <span class="context-item">
+            <span class="{{ item.icon }}"></span>
+            {% if item.link %}
+                <a href="{{ item.link }}" class="context-label">{{ item.title|trim }}</a>
+            {% else %}
+                <span class="context-label">{{ item.title|trim }}</span>
+            {% endif %}
+        </span>
+    {% endspaceless %}
+    {{- not loop.last ? ', ' }}
+{% endfor %}
+
+```

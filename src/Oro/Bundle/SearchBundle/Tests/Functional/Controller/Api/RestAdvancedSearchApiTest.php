@@ -2,18 +2,32 @@
 
 namespace Oro\Bundle\SearchBundle\Tests\Functional\Controller\Api;
 
+use Oro\Bundle\SearchBundle\Tests\Functional\Controller\DataFixtures\LoadSearchItemData;
+use Oro\Bundle\SearchBundle\Tests\Functional\SearchExtensionTrait;
+use Oro\Bundle\TestFrameworkBundle\Entity\Item;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 
 /**
- * @dbIsolation
- * @dbReindex
+ * @dbIsolationPerTest
+ * @group search
  */
 class RestAdvancedSearchApiTest extends WebTestCase
 {
+    use SearchExtensionTrait;
+
     protected function setUp()
     {
-        $this->initClient([], $this->generateWsseAuthHeader());
-        $this->loadFixtures(['Oro\Bundle\SearchBundle\Tests\Functional\Controller\DataFixtures\LoadSearchItemData']);
+        parent::setUp();
+
+        $this->initClient([], $this->generateWsseAuthHeader(), true);
+
+        $alias = $this->getSearchObjectMapper()->getEntityAlias(Item::class);
+        $this->getSearchIndexer()->resetIndex(Item::class);
+        $this->ensureItemsLoaded($alias, 0);
+
+        $this->loadFixtures([LoadSearchItemData::class], true);
+        $this->getSearchIndexer()->reindex(Item::class);
+        $this->ensureItemsLoaded($alias, LoadSearchItemData::COUNT);
     }
 
     /**
@@ -24,11 +38,12 @@ class RestAdvancedSearchApiTest extends WebTestCase
      */
     public function testAdvancedSearch(array $request, array $response)
     {
-        $requestUrl = $request['query'];
+        $this->addOroDefaultPrefixToUrlInParameterArray($response['rest']['data'], 'record_url');
+        $queryString = $request['query'];
         $this->client->request(
             'GET',
             $this->getUrl('oro_api_get_search_advanced'),
-            ['query' => $requestUrl]
+            ['query' => $queryString]
         );
 
         $result = $this->client->getResponse();
@@ -39,6 +54,7 @@ class RestAdvancedSearchApiTest extends WebTestCase
         //compare result
         $this->assertEquals($response['records_count'], $result['records_count']);
         $this->assertEquals($response['count'], $result['count']);
+
         $this->assertSameSize($response['rest']['data'], $result['data']);
 
         // remove ID references

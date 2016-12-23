@@ -1,5 +1,6 @@
 <?php
-namespace ConfigBundle\Tests\Provider;
+
+namespace Oro\Bundle\ConfigBundle\Tests\Provider;
 
 use Oro\Bundle\ConfigBundle\Config\ApiTree\SectionDefinition;
 use Oro\Bundle\ConfigBundle\Config\ApiTree\VariableDefinition;
@@ -122,7 +123,8 @@ class SystemConfigurationFormProviderTest extends FormIntegrationTestCase
      */
     public function testExceptions($filename, $exception, $message, $method, $arguments)
     {
-        $this->setExpectedException($exception, $message);
+        $this->expectException($exception);
+        $this->expectExceptionMessage($message);
         $provider = $this->getProviderWithConfigLoaded(__DIR__ . '/../Fixtures/Provider/' . $filename);
         call_user_func_array(array($provider, $method), $arguments);
     }
@@ -157,7 +159,8 @@ class SystemConfigurationFormProviderTest extends FormIntegrationTestCase
             'bad field definition - no data_type'      => array(
                 'filename'  => 'bad_field_without_data_type.yml',
                 'exception' => '\Symfony\Component\Config\Definition\Exception\InvalidConfigurationException',
-                'message'   => 'The "data_type" is required except "ui_only" is defined. {"options":[]}',
+                'message'   => 'The "data_type" is required except "ui_only" is defined. '
+                    . '{"options":[],"page_reload":false}',
                 'method'    => 'getTree',
                 'arguments' => array()
             ),
@@ -178,7 +181,7 @@ class SystemConfigurationFormProviderTest extends FormIntegrationTestCase
             'bad - undefined field in api_tree'        => array(
                 'filename'  => 'bad_undefined_field_in_api_tree.yml',
                 'exception' => '\Symfony\Component\Config\Definition\Exception\InvalidConfigurationException',
-                'message'   => 'The field "some_field" is used in "oro_system_configuration.section1.some_field",'
+                'message'   => 'The field "some_field" is used in "system_configuration.section1.some_field",'
                     . ' but it is not defined in "fields" section.',
                 'method'    => 'getTree',
                 'arguments' => array()
@@ -186,7 +189,7 @@ class SystemConfigurationFormProviderTest extends FormIntegrationTestCase
             'bad - ui_only field in api_tree'          => array(
                 'filename'  => 'bad_ui_only_field_in_api_tree.yml',
                 'exception' => '\Symfony\Component\Config\Definition\Exception\InvalidConfigurationException',
-                'message'   => 'The field "some_field" is used in "oro_system_configuration.section1.some_field",'
+                'message'   => 'The field "some_field" is used in "system_configuration.section1.some_field",'
                     . ' but "data_type" is not defined in "fields" section.',
                 'method'    => 'getTree',
                 'arguments' => array()
@@ -297,8 +300,9 @@ class SystemConfigurationFormProviderTest extends FormIntegrationTestCase
         $subscriber = $this->getMockBuilder('Oro\Bundle\ConfigBundle\Form\EventListener\ConfigSubscriber')
             ->setMethods(array('__construct'))
             ->disableOriginalConstructor()->getMock();
+        $container = $this->createMock('Symfony\Component\DependencyInjection\ContainerInterface');
 
-        $formType       = new FormType($subscriber);
+        $formType       = new FormType($subscriber, $container);
         $formFieldType  = new FormFieldType();
         $useParentScope = new ParentScopeCheckbox();
 

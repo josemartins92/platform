@@ -72,7 +72,7 @@ class ProductDataProvider
 }
 ```
 
-Also you can implement [AbstractFormProvider](../../../../Component/Layout/DataProvider/AbstractFormProvider.php) if you use forms.
+Also you can implement [AbstractFormProvider](../../Layout/DataProvider/AbstractFormProvider.php) if you use forms.
 
 **IMPORTANT:**  DataProvider provider method should begin with `get`, `has` or `is`.
 
@@ -102,7 +102,7 @@ There are few ways how data could be accessed. Most common ways are the followin
     /**
      * {@inheritdoc}
      */
-    public function buildView(BlockView $view, BlockInterface $block, array $options)
+    public function buildView(BlockView $view, BlockInterface $block, Options $options)
     {
 	    /** @var Product $product */
         $product = $block->getData()->get('product');

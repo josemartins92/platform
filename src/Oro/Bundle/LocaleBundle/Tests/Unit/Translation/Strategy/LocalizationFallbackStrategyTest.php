@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityManager;
 
+use Oro\Bundle\LocaleBundle\DependencyInjection\Configuration;
 use Oro\Component\Testing\Unit\EntityTrait;
 
 use Oro\Bundle\LocaleBundle\Entity\Repository\LocalizationRepository;
@@ -33,11 +34,16 @@ class LocalizationFallbackStrategyTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->doctrine = $this->getMock('Doctrine\Common\Persistence\ManagerRegistry');
+        $this->doctrine = $this->createMock('Doctrine\Common\Persistence\ManagerRegistry');
         $this->cache = $this->getMockBuilder('Doctrine\Common\Cache\CacheProvider')
             ->setMethods(['fetch', 'contains', 'save', 'delete'])->getMockForAbstractClass();
         $this->strategy = new LocalizationFallbackStrategy($this->doctrine, $this->cache);
         $this->strategy->setEntityClass('Oro\Bundle\LocaleBundle\Entity\Localization');
+    }
+
+    public function testIsApplicable()
+    {
+        $this->assertTrue($this->strategy->isApplicable());
     }
 
     /**
@@ -118,8 +124,10 @@ class LocalizationFallbackStrategyTest extends \PHPUnit_Framework_TestCase
             'childLocalizations' => new ArrayCollection([$firstLevelRu])
         ]);
         $localizations = [
-            'en' => ['en' => ['en' => []]],
-            'ru' => ['ru' => []],
+            Configuration::DEFAULT_LOCALE => [
+                'en' => ['en' => ['en' => []]],
+                'ru' => ['ru' => []],
+            ]
         ];
         return [
             ['entities' => [$en, $ru], 'localizations' => $localizations],

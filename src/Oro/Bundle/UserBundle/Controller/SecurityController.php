@@ -2,11 +2,11 @@
 
 namespace Oro\Bundle\UserBundle\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Symfony\Component\HttpFoundation\Response;
-
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Symfony\Component\HttpFoundation\Response;
 
 class SecurityController extends Controller
 {
@@ -31,7 +31,7 @@ class SecurityController extends Controller
             // last authentication error (if any)
             'error'         => $helper->getLastAuthenticationError(),
             // CSRF token for the login form
-            'csrf_token'    => $csrfTokenManager->getToken('authenticate')->getValue()
+            'csrf_token'    => $csrfTokenManager->getToken('authenticate')->getValue(),
         ];
     }
 

@@ -11,7 +11,7 @@ use Oro\Bundle\ActionBundle\Action\RunActionGroup;
 use Oro\Bundle\ActionBundle\Model\ActionData;
 use Oro\Bundle\ActionBundle\Model\ActionGroupRegistry;
 
-use Oro\Component\Action\Model\ContextAccessor;
+use Oro\Component\ConfigExpression\ContextAccessor;
 
 class RunActionGroupTest extends \PHPUnit_Framework_TestCase
 {
@@ -28,7 +28,7 @@ class RunActionGroupTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->eventDispatcher = $this->getMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
+        $this->eventDispatcher = $this->createMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
 
         $this->mockActionGroupRegistry = $this->getMockBuilder('Oro\Bundle\ActionBundle\Model\ActionGroupRegistry')
             ->disableOriginalConstructor()
@@ -90,7 +90,8 @@ class RunActionGroupTest extends \PHPUnit_Framework_TestCase
      */
     public function testInitializeException(array $inputData, $exception, $exceptionMessage)
     {
-        $this->setExpectedException($exception, $exceptionMessage);
+        $this->expectException($exception);
+        $this->expectExceptionMessage($exceptionMessage);
 
         $this->mockActionGroupRegistry
             ->expects($this->once())
@@ -154,9 +155,12 @@ class RunActionGroupTest extends \PHPUnit_Framework_TestCase
         ];
     }
 
+    /**
+     * @expectedException \BadMethodCallException
+     * @expectedExceptionMessage Uninitialized action execution.
+     */
     public function testExecuteActionWithoutInitialization()
     {
-        $this->setExpectedException('\BadMethodCallException', 'Uninitialized action execution.');
         $this->actionGroup->execute([]);
     }
 

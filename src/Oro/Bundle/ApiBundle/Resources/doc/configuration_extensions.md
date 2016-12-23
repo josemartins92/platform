@@ -19,7 +19,7 @@ Configuration extensions allow to:
 Creating configuration extension
 --------------------------------
 
-Each configuration extension must implement [ConfigExtensionInterface](../../Config/ConfigExtensionInterface.php) (also you can use [AbstractConfigExtension](../../Config/AbstractConfigExtension) as a superclass) and be registered in the dependency injection container using the `oro_api.config_extension` tag.
+Each configuration extension must implement [ConfigExtensionInterface](../../Config/ConfigExtensionInterface.php) (also you can use [AbstractConfigExtension](../../Config/AbstractConfigExtension) as a superclass). To register new configuration extension you can add *Resources/config/oro/app.yml* in any bundle or use *app/config/config.yml* of your application. Here is an example:
 
 ```php
 <?php
@@ -33,11 +33,15 @@ class MyConfigExtension extends AbstractConfigExtension
 ```
 
 ```yaml
+# app/config/config.yml
+services:
   acme.api.my_config_extension:
     class: Acme\Bundle\AcmeBundle\Api\MyConfigExtension
     public: false
-    tags:
-        - { name: oro_api.config_extension }
+
+oro_api:
+    config_extensions:
+        - acme.api.my_config_extension
 ```
 
 Add options to existing configuration section
@@ -222,7 +226,7 @@ class MyConfigExtension extends AbstractConfigExtension
 An example of usage created configuration section:
 
 ```yaml
-oro_api:
+api:
     ...
     entities:
         Acme\Bundle\AcmeBundle\Entity\AcmeEntity:
@@ -234,7 +238,7 @@ To check that you configuration section was added correctly run `php app/console
 
 ```yaml
 # The structure of "Resources/config/oro/api.yml"
-oro_api:
+api:
     ...
     entities:
         name:

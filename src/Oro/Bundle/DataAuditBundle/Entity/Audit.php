@@ -7,12 +7,10 @@ use Doctrine\ORM\Mapping as ORM;
 use JMS\Serializer\Annotation\Type;
 use JMS\Serializer\Annotation\SerializedName;
 
-use BeSimple\SoapBundle\ServiceDefinition\Annotation as Soap;
-
 use Oro\Bundle\UserBundle\Entity\AbstractUser;
 
 /**
- * @ORM\Entity(repositoryClass="Oro\Bundle\DataAuditBundle\Entity\Repository\AuditRepository")
+ * @ORM\Entity()
  */
 class Audit extends AbstractAudit
 {
@@ -22,15 +20,13 @@ class Audit extends AbstractAudit
      * @ORM\Column(type="integer")
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")
-     * @Soap\ComplexType("int", nillable=true)
      */
     protected $id;
 
     /**
      * @var string $loggedAt
      *
-     * @ORM\Column(name="logged_at", type="datetime")
-     * @Soap\ComplexType("dateTime", nillable=true)
+     * @ORM\Column(name="logged_at", type="datetime", nullable=true)
      */
     protected $loggedAt;
 
@@ -38,7 +34,6 @@ class Audit extends AbstractAudit
      * @var string $objectId
      *
      * @ORM\Column(name="object_id", type="integer", nullable=true)
-     * @Soap\ComplexType("int", nillable=true)
      */
     protected $objectId;
 
@@ -46,30 +41,25 @@ class Audit extends AbstractAudit
      * @var string $objectClass
      *
      * @ORM\Column(name="object_class", type="string", length=255)
-     * @Soap\ComplexType("string", nillable=true)
      */
     protected $objectClass;
 
     /**
      * @var string $objectName
      *
-     * @ORM\Column(name="object_name", type="string", length=255)
-     * @Soap\ComplexType("string", nillable=true)
+     * @ORM\Column(name="object_name", type="string", length=255, nullable=true)
      */
     protected $objectName;
 
     /**
      * @var integer $version
      *
-     * @ORM\Column(type="integer")
-     * @Soap\ComplexType("string", nillable=true)
+     * @ORM\Column(type="integer", nullable=true)
      */
     protected $version;
 
     /**
      * @var string $username
-     *
-     * @Soap\ComplexType("string", nillable=true)
      */
     protected $username;
 
@@ -109,25 +99,5 @@ class Audit extends AbstractAudit
     public function getUsername()
     {
         return $this->getUser() ? $this->getUser()->getUsername() : '';
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @deprecated 1.8.0:2.1.0 Use method createField instead
-     */
-    public function setData($data)
-    {
-        parent::setData($data);
-    }
-
-    /**
-     * @deprecated 1.8.0:2.1.0 This method is for internal use only. Use method getData or getFields instead
-     *
-     * @return array|null
-     */
-    public function getDeprecatedData()
-    {
-        return $this->data;
     }
 }

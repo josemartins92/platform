@@ -11,6 +11,10 @@ Table of Contents
  - [Disable entity action](#disable-entity-action)
  - [Change delete handler for entity](#change-delete-handler-for-entity)
  - [Change the maximum number of entities that can be deleted by one request](#change-the-maximum-number-of-entities-that-can-be-deleted-by-one-request)
+ - [Configure nested object](#configure-nested-object)
+ - [Turn on Extended Many-To-One Associations](#turn-on-extended-many-to-one-associations)
+ - [Turn on Extended Many-To-Many Associations](#turn-on-extended-many-to-many-associations)
+ - [Turn on Extended Multiple Many-To-One Associations](#turn-on-extended-multiple-many-to-one-associations)
 
 
 Turn on API for entity
@@ -20,7 +24,7 @@ By default, API for entities is disabled. To turn on API for some entity, you sh
 
 
 ```yaml
-oro_api:
+api:
     entities:
         Acme\Bundle\ProductBundle\Product: ~
 ```
@@ -42,7 +46,7 @@ oro_entity:
 To override these rules in Data API you can use the following `Resources/config/oro/api.yml`:
 
 ```yaml
-oro_api:
+api:
     entities:
         Acme\Bundle\AcmeBundle\Entity\AcmeEntity1:
             exclude: false # override exclude rule from entity.yml
@@ -70,7 +74,7 @@ For example, lets's change permissions for `delete` action. You can do at `Resou
 
 
 ```yaml
-oro_api:
+api:
     entities:
         Acme\Bundle\ProductBundle\Product:
             actions:
@@ -93,10 +97,10 @@ As result, the `VIEW` permission will be used instead of `DELETE` permission.
 Disable access checks for action
 --------------------------------
  
-You can disable access checks for some action by setting `null` as a value to `acl_resource` option in `Resources/config/acl.yml`:
+You can disable access checks for some action by setting `null` as a value to `acl_resource` option in `Resources/config/oro/api.yml`:
 
 ```yaml
-oro_api:
+api:
     entities:
         Acme\Bundle\ProductBundle\Product:
             actions:
@@ -109,10 +113,10 @@ Disable entity action
 
 When you add an entity to the API, all the actions will be available by default.
 
-In case if an action should not be accessible, you can disable it in `Resources/config/acl.yml`:
+In case if an action should not be accessible, you can disable it in `Resources/config/oro/api.yml`:
 
 ```yaml
-oro_api:
+api:
     entities:
         Acme\Bundle\ProductBundle\Product:
             actions:
@@ -123,7 +127,7 @@ oro_api:
 Also, you can use short syntax:
 
 ```yaml
-oro_api:
+api:
     entities:
         Acme\Bundle\ProductBundle\Product:
             actions:
@@ -135,10 +139,10 @@ Change delete handler for entity
 
 By default, entity deletion is processed by [DeleteHandler](../../../SoapBundle/Handler/DeleteHandler.php).
 
-If your want to use another delete handler, you can set it by the `delete_handler` option in `Resources/config/acl.yml`:
+If your want to use another delete handler, you can set it by the `delete_handler` option in `Resources/config/oro/api.yml`:
 
 ```yaml
-oro_api:
+api:
     entities:
         Acme\Bundle\ProductBundle\Product:
             delete_handler: acme.demo.product_delete_handler
@@ -153,10 +157,10 @@ Change the maximum number of entities that can be deleted by one request
 
 By default, the [delete_list](./actions.md#delete_list-action) action can delete not more than 100 entities. This limit is set by the [SetDeleteLimit](../../Processor/DeleteList/SetDeleteLimit.php) processor.
 
-If your want to use another limit, you can set it by the `max_results` option in `Resources/config/acl.yml`:
+If your want to use another limit, you can set it by the `max_results` option in `Resources/config/oro/api.yml`:
 
 ```yaml
-oro_api:
+api:
     entities:
         Acme\Bundle\ProductBundle\Product:
             actions:
@@ -167,10 +171,150 @@ oro_api:
 Also you can remove the limit at all. To do this, set `-1` as a value for the `max_results` option:
 
 ```yaml
-oro_api:
+api:
     entities:
         Acme\Bundle\ProductBundle\Product:
             actions:
                 delete_list:
                     max_results: -1
 ```
+
+Configure nested object
+-----------------------
+
+Sometimes it is required to group several fields and expose them as an nested object in Data API. For example lets suppose that an entity has two fields `intervalNumber` and `intervalUnit` but you need to expose them in API as `number` and `unit` properties of `interval` field. This can be achieved by the following configuration:
+
+```yaml
+api:
+    entities:
+        Oro\Bundle\ReminderBundle\Entity\Reminder:
+            fields:
+                interval:
+                    data_type: nestedObject
+                    form_options:
+                        data_class: Oro\Bundle\ReminderBundle\Model\ReminderInterval
+                        by_reference: false
+                    fields:
+                        number:
+                            property_path: intervalNumber
+                        unit:
+                            property_path: intervalUnit
+                intervalNumber:
+                    exclude: true
+                intervalUnit:
+                    exclude: true
+```
+
+Please note that an entity, in this example *Oro\Bundle\ReminderBundle\Entity\Reminder*, should have `setInterval` method. This method is called by [create](./actions.md#create-action) and [update](./actions.md#update-action) actions to set the nested object. 
+
+Here is an example how the nested objects looks in JSON.API:
+
+```json
+{
+  "data": {
+    "type": "reminders",
+    "id": "1",
+    "attributes": {
+      "interval": {
+        "number": 2,
+        "unit": "H"
+      }
+    }
+  }
+}
+```
+
+Turn on Extended Many-To-One Associations
+-----------------------------------------
+
+For detail what are extended associations, please refer to [Associations](../../../EntityExtendBundle/Resources/doc/associations.md) topic.
+
+Depending on current entity configuration, each association resource (e.g. attachment) can be assigned to one of the couple of resources (e.g. user, account, contact) that supports such associations.
+
+By default, there is no possibility to retrieve targets of such associations. But this behaviour can be enabled via configuration in `Resources/config/oro/api.yml`, for instance:
+
+```yaml
+api:
+    entities:
+        Oro\Bundle\AttachmentBundle\Entity\Attachment:
+            fields:
+                target:
+                    data_type: association:manyToOne
+```
+
+After applying configuration like above, the `target` relationship will be available in scope of [get_list](./actions.md#get_list-action), [get](./actions.md#get-action), [create](./actions.md#create-action) and [update](./actions.md#update-action) actions. Also the `target` relationship will be available as subresource and it will be possible to perform [get_subresource](./actions.md#get_subresource-action), [get_relationship](./actions.md#get_relationship-action) and [update_relationship](./actions.md#update_relationship-action) actions.
+
+The `data_type` parameter has format: `association:relationType:associationKind`, where
+
+ - `relationType` part should have 'manyToOne' value for extended Many-To-One association;
+ - `associationKind` - optional part. The association kind.
+
+Turn on Extended Many-To-Many Associations
+------------------------------------------
+
+For detail what are extended associations, please refer to [Associations](../../../EntityExtendBundle/Resources/doc/associations.md) topic.
+
+Depending on current entity configuration, each association resource (e.g. call) can be assigned to several resources (e.g. user, account, contact) that supports such associations.
+
+By default, there is no possibility to retrieve targets of such associations. But this behaviour can be enabled via configuration in `Resources/config/oro/api.yml`, for instance:
+
+```yaml
+api:
+    entities:
+        Oro\Bundle\CallBundle\Entity\Call:
+            fields:
+                activityTargets:
+                    data_type: association:manyToMany:activity
+```
+
+After applying configuration like above, the `activityTargets` relationship will be available in scope of 
+[get_list](./actions.md#get_list-action), 
+[get](./actions.md#get-action), 
+[create](./actions.md#create-action) and 
+[update](./actions.md#update-action) actions. 
+Also the `activityTargets` relationship will be available as subresource and it will be possible to perform 
+[get_subresource](./actions.md#get_subresource-action), 
+[get_relationship](./actions.md#get_relationship-action), 
+[add_relationship](./actions.md#add_relationship-action),
+[update_relationship](./actions.md#update_relationship-action) and.
+[delete_relationship](./actions.md#delete_relationship-action) actions.
+
+The `data_type` parameter has format: `association:relationType:associationKind`, where
+
+ - `relationType` part should have 'manyToMany' value for extended Many-To-Many association;
+ - `associationKind` - optional part. The association kind.
+
+Turn on Extended Multiple Many-To-One Associations
+--------------------------------------------------
+
+For detail what are extended associations, please refer to [Associations](../../../EntityExtendBundle/Resources/doc/associations.md) topic.
+
+Depending on current entity configuration, each association resource (e.g. call) can be assigned to several resources (e.g. user, account, contact) that supports such associations, but in case of multiple many-to-one association a resource can be associated with only one other resource of each type. E.g. a call can be associated only with one user, one account, etc.
+
+By default, there is no possibility to retrieve targets of such associations. But this behaviour can be enabled via configuration in `Resources/config/oro/api.yml`, for instance:
+
+```yaml
+api:
+    entities:
+        Oro\Bundle\CallBundle\Entity\Call:
+            fields:
+                targets:
+                    data_type: association:multipleManyToOne
+```
+
+After applying configuration like above, the `targets` relationship will be available in scope of 
+[get_list](./actions.md#get_list-action), 
+[get](./actions.md#get-action), 
+[create](./actions.md#create-action) and 
+[update](./actions.md#update-action) actions. 
+Also the `targets` relationship will be available as subresource and it will be possible to perform 
+[get_subresource](./actions.md#get_subresource-action), 
+[get_relationship](./actions.md#get_relationship-action), 
+[add_relationship](./actions.md#add_relationship-action),
+[update_relationship](./actions.md#update_relationship-action) and.
+[delete_relationship](./actions.md#delete_relationship-action) actions.
+
+The `data_type` parameter has format: `association:relationType:associationKind`, where
+
+ - `relationType` part should have 'multipleManyToOne' value for extended Multiple Many-To-One association;
+ - `associationKind` - optional part. The association kind.

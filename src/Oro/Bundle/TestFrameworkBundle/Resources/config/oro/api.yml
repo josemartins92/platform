@@ -1,4 +1,4 @@
-oro_api:
+api:
     entities:
         Oro\Bundle\OrganizationBundle\Entity\BusinessUnit:
             filters:
@@ -55,3 +55,4 @@ oro_api:
                 fields:
                     renamedName:
                         exclude: false
+        Oro\Bundle\TestFrameworkBundle\Entity\TestDefaultAndNull:

@@ -9,14 +9,17 @@ use Oro\Bundle\ApiBundle\Config\FiltersConfig;
 use Oro\Bundle\ApiBundle\Config\FiltersConfigExtra;
 use Oro\Bundle\ApiBundle\Config\SortersConfig;
 use Oro\Bundle\ApiBundle\Config\SortersConfigExtra;
+use Oro\Bundle\ApiBundle\Metadata\ActionMetadataExtra;
 use Oro\Bundle\ApiBundle\Metadata\EntityMetadata;
 use Oro\Bundle\ApiBundle\Model\Error;
 use Oro\Bundle\ApiBundle\Processor\Context;
+use Oro\Bundle\ApiBundle\Request\DocumentBuilderInterface;
 use Oro\Bundle\ApiBundle\Request\RequestType;
 use Oro\Bundle\ApiBundle\Util\ConfigUtil;
 
 /**
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @SuppressWarnings(PHPMD.ExcessiveClassLength)
  */
 class ContextTest extends \PHPUnit_Framework_TestCase
 {
@@ -212,6 +215,18 @@ class ContextTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($this->context->isSuccessResponse());
         $this->context->setResponseStatusCode(300);
         $this->assertFalse($this->context->isSuccessResponse());
+    }
+
+    public function testResponseDocumentBuilder()
+    {
+        $this->assertNull($this->context->getResponseDocumentBuilder());
+
+        $documentBuilder = $this->createMock(DocumentBuilderInterface::class);
+        $this->context->setResponseDocumentBuilder($documentBuilder);
+        $this->assertSame($documentBuilder, $this->context->getResponseDocumentBuilder());
+
+        $this->context->setResponseDocumentBuilder(null);
+        $this->assertNull($this->context->getResponseDocumentBuilder());
     }
 
     public function testClassName()
@@ -666,7 +681,7 @@ class ContextTest extends \PHPUnit_Framework_TestCase
 
     public function testFilters()
     {
-        $testFilter = $this->getMock('Oro\Bundle\ApiBundle\Filter\FilterInterface');
+        $testFilter = $this->createMock('Oro\Bundle\ApiBundle\Filter\FilterInterface');
 
         $this->assertNotNull($this->context->getFilters());
 
@@ -683,7 +698,7 @@ class ContextTest extends \PHPUnit_Framework_TestCase
 
     public function testFilterValues()
     {
-        $accessor = $this->getMock('Oro\Bundle\ApiBundle\Filter\FilterValueAccessorInterface');
+        $accessor = $this->createMock('Oro\Bundle\ApiBundle\Filter\FilterValueAccessorInterface');
         $this->context->setFilterValues($accessor);
 
         $this->assertSame($accessor, $this->context->getFilterValues());
@@ -928,6 +943,40 @@ class ContextTest extends \PHPUnit_Framework_TestCase
         $this->assertNull($this->context->get(Context::METADATA_EXTRAS));
     }
 
+    public function testMetadataExtrasWhenActionExistsInContext()
+    {
+        $action = 'test_action';
+        $this->context->setAction($action);
+
+        $this->assertNull($this->context->get(Context::METADATA_EXTRAS));
+
+        $this->assertEquals(
+            [new ActionMetadataExtra($action)],
+            $this->context->getMetadataExtras()
+        );
+        $this->assertEquals(
+            [new ActionMetadataExtra($action)],
+            $this->context->get(Context::METADATA_EXTRAS)
+        );
+
+        // test that ActionMetadataExtra is not added twice
+        $this->assertEquals(
+            [new ActionMetadataExtra($action)],
+            $this->context->getMetadataExtras()
+        );
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @expectedExceptionMessage The "action" metadata extra already exists.
+     */
+    public function testActionMetadataExtrasCannotBeOverridden()
+    {
+        $action = 'test_action';
+        $this->context->setAction($action);
+        $this->context->addMetadataExtra(new ActionMetadataExtra('other_action'));
+    }
+
     /**
      * @expectedException \InvalidArgumentException
      * @expectedExceptionMessage Expected an array of "Oro\Bundle\ApiBundle\Metadata\MetadataExtraInterface".
@@ -991,6 +1040,35 @@ class ContextTest extends \PHPUnit_Framework_TestCase
         $this->context->resetErrors();
         $this->assertFalse($this->context->hasErrors());
         $this->assertSame([], $this->context->getErrors());
+    }
+
+    public function testSoftErrorsHandling()
+    {
+        $this->assertFalse($this->context->isSoftErrorsHandling());
+        $this->assertFalse($this->context->has(Context::SOFT_ERRORS_HANDLING));
+
+        $this->context->setSoftErrorsHandling(true);
+        $this->assertTrue($this->context->isSoftErrorsHandling());
+        $this->assertTrue($this->context->has(Context::SOFT_ERRORS_HANDLING));
+        $this->assertTrue($this->context->get(Context::SOFT_ERRORS_HANDLING));
+
+        $this->context->setSoftErrorsHandling(false);
+        $this->assertFalse($this->context->isSoftErrorsHandling());
+        $this->assertFalse($this->context->has(Context::SOFT_ERRORS_HANDLING));
+    }
+
+    public function testProcessed()
+    {
+        $this->assertFalse($this->context->isProcessed('test'));
+
+        $this->context->setProcessed('test');
+        $this->context->setProcessed('another');
+        $this->assertTrue($this->context->isProcessed('test'));
+        $this->assertTrue($this->context->isProcessed('another'));
+
+        $this->context->clearProcessed('test');
+        $this->assertFalse($this->context->isProcessed('test'));
+        $this->assertTrue($this->context->isProcessed('another'));
     }
 
     /**

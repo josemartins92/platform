@@ -8,7 +8,7 @@ use Oro\Bundle\ActionBundle\Model\ActionData;
 use Oro\Bundle\ActionBundle\Model\Operation;
 use Oro\Bundle\ActionBundle\Model\OptionsAssembler;
 
-use Oro\Component\Action\Model\ContextAccessor;
+use Oro\Component\ConfigExpression\ContextAccessor;
 
 class OptionsHelper
 {
@@ -51,12 +51,17 @@ class OptionsHelper
     /**
      * @param Operation $operation
      * @param array $context
+     * @param ActionData $actionData
+     *
      * @return array
      */
-    public function getFrontendOptions(Operation $operation, array $context = null)
+    public function getFrontendOptions(Operation $operation, array $context = null, ActionData $actionData = null)
     {
         $actionContext = $this->contextHelper->getContext($context);
-        $actionData = $this->contextHelper->getActionData($actionContext);
+
+        if (null === $actionData) {
+            $actionData = $this->contextHelper->getActionData($actionContext);
+        }
 
         return [
             'options' => $this->createOptions($operation, $actionData, $actionContext),
@@ -121,13 +126,11 @@ class OptionsHelper
 
         $frontendOptions = $this->resolveOptions($actionData, $operation->getDefinition()->getFrontendOptions());
 
-        $title = isset($frontendOptions['title']) ? $frontendOptions['title'] : $operation->getDefinition()->getLabel();
-
         $options = [
             'hasDialog' => $operation->hasForm(),
             'showDialog' => !empty($frontendOptions['show_dialog']),
             'dialogOptions' => [
-                'title' => $this->translator->trans($title),
+                'title' => $this->getTitle($operation, $frontendOptions),
                 'dialogOptions' => !empty($frontendOptions['options']) ? $frontendOptions['options'] : []
             ],
             'executionUrl' => $executionUrl,
@@ -138,6 +141,19 @@ class OptionsHelper
         $this->addOption($options, $frontendOptions, 'confirmation');
 
         return $options;
+    }
+
+    /**
+     * @param Operation $operation
+     * @param array $frontendOptions
+     * @return string
+     */
+    protected function getTitle(Operation $operation, array $frontendOptions)
+    {
+        $title = isset($frontendOptions['title']) ? $frontendOptions['title'] : $operation->getDefinition()->getLabel();
+        $titleParams = isset($frontendOptions['title_parameters']) ? $frontendOptions['title_parameters'] : [];
+
+        return $this->translator->trans($title, $titleParams);
     }
 
     /**

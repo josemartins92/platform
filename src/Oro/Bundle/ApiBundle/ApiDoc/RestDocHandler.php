@@ -8,26 +8,20 @@ use Nelmio\ApiDocBundle\Annotation\ApiDoc;
 use Nelmio\ApiDocBundle\Extractor\HandlerInterface;
 
 use Oro\Component\PhpUtils\ReflectionUtil;
+use Oro\Bundle\ApiBundle\ApiDoc\Parser\ApiDocMetadata;
 use Oro\Bundle\ApiBundle\Config\DescriptionsConfigExtra;
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
-use Oro\Bundle\ApiBundle\Config\StatusCodesConfig;
-use Oro\Bundle\ApiBundle\Filter\ComparisonFilter;
-use Oro\Bundle\ApiBundle\Filter\FilterCollection;
-use Oro\Bundle\ApiBundle\Filter\StandaloneFilter;
-use Oro\Bundle\ApiBundle\Filter\StandaloneFilterWithDefaultValue;
 use Oro\Bundle\ApiBundle\Metadata\EntityMetadata;
 use Oro\Bundle\ApiBundle\Processor\ActionProcessorBagInterface;
 use Oro\Bundle\ApiBundle\Processor\Context;
 use Oro\Bundle\ApiBundle\Processor\Subresource\SubresourceContext;
-use Oro\Bundle\ApiBundle\Request\DataType;
+use Oro\Bundle\ApiBundle\Request\ApiActions;
 use Oro\Bundle\ApiBundle\Request\ValueNormalizer;
+use Oro\Bundle\ApiBundle\Util\ValueNormalizerUtil;
 
 class RestDocHandler implements HandlerInterface
 {
-    const ID_ATTRIBUTE   = 'id';
     const ID_PLACEHOLDER = '{id}';
-
-    const ID_DESCRIPTION = 'The identifier of an entity';
 
     /** @var RestDocViewDetector */
     protected $docViewDetector;
@@ -38,19 +32,31 @@ class RestDocHandler implements HandlerInterface
     /** @var ValueNormalizer */
     protected $valueNormalizer;
 
+    /** @var RestDocIdentifierHandler */
+    protected $identifierHandler;
+
+    /** @var RestDocFiltersHandler */
+    protected $filtersHandler;
+
     /**
      * @param RestDocViewDetector         $docViewDetector
      * @param ActionProcessorBagInterface $processorBag
      * @param ValueNormalizer             $valueNormalizer
+     * @param RestDocIdentifierHandler    $identifierHandler
+     * @param RestDocFiltersHandler       $filtersHandler
      */
     public function __construct(
         RestDocViewDetector $docViewDetector,
         ActionProcessorBagInterface $processorBag,
-        ValueNormalizer $valueNormalizer
+        ValueNormalizer $valueNormalizer,
+        RestDocIdentifierHandler $identifierHandler,
+        RestDocFiltersHandler $filtersHandler
     ) {
         $this->docViewDetector = $docViewDetector;
         $this->processorBag = $processorBag;
         $this->valueNormalizer = $valueNormalizer;
+        $this->identifierHandler = $identifierHandler;
+        $this->filtersHandler = $filtersHandler;
     }
 
     /**
@@ -67,38 +73,31 @@ class RestDocHandler implements HandlerInterface
         if (!$action) {
             return;
         }
-
         $entityType = $this->extractEntityTypeFromRoute($route);
-        if ($entityType) {
-            $annotation->setSection($entityType);
-
-            $entityClass = $this->valueNormalizer->normalizeValue(
-                $entityType,
-                DataType::ENTITY_CLASS,
-                $this->docViewDetector->getRequestType()
-            );
-            $associationName = $route->getDefault(RestRouteOptionsResolver::ASSOCIATION_ATTRIBUTE);
-            $actionContext = $this->getContext($action, $entityClass, $associationName);
-            $config = $actionContext->getConfig();
-
-            $this->setDescription($annotation, $config);
-            $statusCodes = $config->getStatusCodes();
-            if ($statusCodes) {
-                $this->setStatusCodes($annotation, $statusCodes);
-            }
-            if ($this->hasAttribute($route, self::ID_PLACEHOLDER)) {
-                if ($associationName) {
-                    $this->addIdRequirement($annotation, $route, $actionContext->getParentMetadata());
-                } else {
-                    $this->addIdRequirement($annotation, $route, $actionContext->getMetadata());
-                }
-            }
-            $filters = $actionContext->getFilters();
-            if (!$filters->isEmpty()) {
-                $this->addFilters($annotation, $filters, $actionContext->getMetadata());
-            }
-            $this->sortFilters($annotation);
+        if (!$entityType) {
+            return;
         }
+
+        $entityClass = $this->getEntityClass($entityType);
+        $associationName = $route->getDefault(RestRouteOptionsResolver::ASSOCIATION_ATTRIBUTE);
+        $context = $this->getContext($action, $entityClass, $associationName);
+        $config = $context->getConfig();
+        $metadata = $context->getMetadata();
+
+        $annotation->setSection($entityType);
+        $this->setDescription($annotation, $config);
+        $this->setDocumentation($annotation, $config);
+        if ($this->hasAttribute($route, self::ID_PLACEHOLDER)) {
+            $this->identifierHandler->handle(
+                $annotation,
+                $route,
+                $associationName ? $context->getParentMetadata() : $metadata
+            );
+        }
+        $this->setInputMetadata($annotation, $action, $config, $metadata);
+        $this->setOutputMetadata($annotation, $entityClass, $action, $config, $metadata, $associationName);
+        $this->filtersHandler->handle($annotation, $context->getFilters(), $metadata);
+        $this->setStatusCodes($annotation, $config);
     }
 
     /**
@@ -112,23 +111,30 @@ class RestDocHandler implements HandlerInterface
     }
 
     /**
-     * @param string $entityClass
+     * Checks if a route has the given placeholder in a path.
      *
-     * @return string|null
+     * @param Route  $route
+     * @param string $placeholder
+     *
+     * @return bool
      */
-    protected function getEntityType($entityClass)
+    protected function hasAttribute(Route $route, $placeholder)
     {
-        try {
-            return $this->valueNormalizer->normalizeValue(
-                $entityClass,
-                DataType::ENTITY_TYPE,
-                $this->docViewDetector->getRequestType()
-            );
-        } catch (\Exception $e) {
-            // ignore any exception here
-        }
+        return false !== strpos($route->getPath(), $placeholder);
+    }
 
-        return null;
+    /**
+     * @param string $entityType
+     *
+     * @return string
+     */
+    protected function getEntityClass($entityType)
+    {
+        return ValueNormalizerUtil::convertToEntityClass(
+            $this->valueNormalizer,
+            $entityType,
+            $this->docViewDetector->getRequestType()
+        );
     }
 
     /**
@@ -172,6 +178,14 @@ class RestDocHandler implements HandlerInterface
         if ($description) {
             $annotation->setDescription($description);
         }
+    }
+
+    /**
+     * @param ApiDoc                 $annotation
+     * @param EntityDefinitionConfig $config
+     */
+    protected function setDocumentation(ApiDoc $annotation, EntityDefinitionConfig $config)
+    {
         $documentation = $config->getDocumentation();
         if ($documentation) {
             $annotation->setDocumentation($documentation);
@@ -179,166 +193,102 @@ class RestDocHandler implements HandlerInterface
     }
 
     /**
-     * @param ApiDoc            $annotation
-     * @param StatusCodesConfig $statusCodes
+     * @param ApiDoc                 $annotation
+     * @param string                 $action
+     * @param EntityDefinitionConfig $config
+     * @param EntityMetadata         $metadata
      */
-    protected function setStatusCodes(ApiDoc $annotation, StatusCodesConfig $statusCodes)
-    {
-        $codes = $statusCodes->getCodes();
-        foreach ($codes as $statusCode => $code) {
-            if (!$code->isExcluded()) {
-                $annotation->addStatusCode($statusCode, $code->getDescription());
-            }
+    protected function setInputMetadata(
+        ApiDoc $annotation,
+        $action,
+        EntityDefinitionConfig $config,
+        EntityMetadata $metadata
+    ) {
+        if (ApiActions::isInputAction($action)) {
+            $this->setDirectionValue($annotation, 'input', $this->getDirectionValue($action, $config, $metadata));
         }
     }
 
     /**
-     * @param ApiDoc         $annotation
-     * @param Route          $route
-     * @param EntityMetadata $metadata
+     * @param ApiDoc                 $annotation
+     * @param string                 $entityClass
+     * @param string                 $action
+     * @param EntityDefinitionConfig $config
+     * @param EntityMetadata         $metadata
+     * @param string|null            $associationName
      */
-    protected function addIdRequirement(ApiDoc $annotation, Route $route, EntityMetadata $metadata)
-    {
-        $idFields = $metadata->getIdentifierFieldNames();
-        $dataType = DataType::STRING;
-        if (count($idFields) === 1) {
-            $field = $metadata->getField(reset($idFields));
-            if (!$field) {
-                throw new \RuntimeException(
-                    sprintf(
-                        'The metadata for "%s" entity does not contains "%s" identity field. Resource: %s %s',
-                        $metadata->getClassName(),
-                        reset($idFields),
-                        implode(' ', $route->getMethods()),
-                        $route->getPath()
-                    )
-                );
+    protected function setOutputMetadata(
+        ApiDoc $annotation,
+        $entityClass,
+        $action,
+        EntityDefinitionConfig $config,
+        EntityMetadata $metadata,
+        $associationName = null
+    ) {
+        if (ApiActions::isOutputAction($action)) {
+            // check if output format should be taken from another action type. In this case
+            // entity metadata and config will be taken for the action, those format should be used
+            $substituteAction = ApiActions::getActionOutputFormatActionType($action);
+            if ($action !== $substituteAction) {
+                $substituteContext = $this->getContext($substituteAction, $entityClass, $associationName);
+                $config = $substituteContext->getConfig();
+                $metadata = $substituteContext->getMetadata();
             }
-            $dataType = $field->getDataType();
-        }
 
-        $annotation->addRequirement(
-            self::ID_ATTRIBUTE,
-            [
-                'dataType'    => ApiDocDataTypeConverter::convertToApiDocDataType($dataType),
-                'requirement' => $this->getIdRequirement($metadata),
-                'description' => self::ID_DESCRIPTION
+            $this->setDirectionValue($annotation, 'output', $this->getDirectionValue($action, $config, $metadata));
+        }
+    }
+
+    /**
+     * @param string                 $action
+     * @param EntityDefinitionConfig $config
+     * @param EntityMetadata         $metadata
+     *
+     * @return array
+     */
+    protected function getDirectionValue($action, EntityDefinitionConfig $config, EntityMetadata $metadata)
+    {
+        return [
+            'class'   => ApiDocMetadata::class,
+            'options' => [
+                'metadata' => new ApiDocMetadata(
+                    $action,
+                    $metadata,
+                    $config,
+                    $this->docViewDetector->getRequestType()
+                )
             ]
-        );
-    }
-
-    /**
-     * @param EntityMetadata $metadata
-     *
-     * @return string
-     */
-    protected function getIdRequirement(EntityMetadata $metadata)
-    {
-        $idFields = $metadata->getIdentifierFieldNames();
-        $idFieldCount = count($idFields);
-        if ($idFieldCount === 1) {
-            // single identifier
-            return $this->getIdFieldRequirement($metadata->getField(reset($idFields))->getDataType());
-        }
-
-        // combined identifier
-        $requirements = [];
-        foreach ($idFields as $field) {
-            $requirements[] = $field . '=' . $this->getIdFieldRequirement($metadata->getField($field)->getDataType());
-        }
-
-        return implode(',', $requirements);
-    }
-
-    /**
-     * @param string $fieldType
-     *
-     * @return string
-     */
-    protected function getIdFieldRequirement($fieldType)
-    {
-        $result = $this->valueNormalizer->getRequirement($fieldType, $this->docViewDetector->getRequestType());
-
-        if (ValueNormalizer::DEFAULT_REQUIREMENT === $result) {
-            $result = '[^\.]+';
-        }
-
-        return $result;
-    }
-
-    /**
-     * @param ApiDoc           $annotation
-     * @param FilterCollection $filters
-     * @param EntityMetadata   $metadata
-     */
-    protected function addFilters(ApiDoc $annotation, FilterCollection $filters, EntityMetadata $metadata)
-    {
-        foreach ($filters as $key => $filter) {
-            if ($filter instanceof StandaloneFilter) {
-                $options = [
-                    'description' => $filter->getDescription(),
-                    'requirement' => $this->valueNormalizer->getRequirement(
-                        $filter->getDataType(),
-                        $this->docViewDetector->getRequestType(),
-                        $filter->isArrayAllowed()
-                    )
-                ];
-                $operators = $filter->getSupportedOperators();
-                if (!empty($operators) && !(count($operators) === 1 && $operators[0] === StandaloneFilter::EQ)) {
-                    $options['operators'] = implode(',', $operators);
-                }
-                if ($filter instanceof StandaloneFilterWithDefaultValue) {
-                    $default = $filter->getDefaultValueString();
-                    if (!empty($default)) {
-                        $options['default'] = $default;
-                    }
-                }
-
-                if ($filter instanceof ComparisonFilter && $metadata->hasAssociation($filter->getField())) {
-                    $targetClassNames = $metadata->getAssociation($filter->getField())
-                        ->getAcceptableTargetClassNames();
-                    $targetEntityTypes = [];
-                    foreach ($targetClassNames as $targetClassName) {
-                        $targetEntityType = $this->getEntityType($targetClassName);
-                        if ($targetEntityType) {
-                            $targetEntityTypes[] = $targetEntityType;
-                        }
-                    }
-                    if (!empty($targetEntityTypes)) {
-                        $options['relation'] = implode(',', $targetEntityTypes);
-                    }
-                }
-
-                $annotation->addFilter($key, $options);
-            }
-        }
+        ];
     }
 
     /**
      * @param ApiDoc $annotation
+     * @param string $direction
+     * @param array  $value
      */
-    protected function sortFilters(ApiDoc $annotation)
+    protected function setDirectionValue(ApiDoc $annotation, $direction, array $value)
     {
-        $filters = $annotation->getFilters();
-        if (!empty($filters)) {
-            ksort($filters);
-            // unfortunately there is no other way to update filters except to use the reflection
-            $filtersProperty = ReflectionUtil::getProperty(new \ReflectionClass($annotation), 'filters');
-            $filtersProperty->setAccessible(true);
-            $filtersProperty->setValue($annotation, $filters);
-        }
+        // unfortunately there is no other way to update "input" and "output" parameters
+        // except to use the reflection
+        $outputProperty = ReflectionUtil::getProperty(new \ReflectionClass($annotation), $direction);
+        $outputProperty->setAccessible(true);
+        $outputProperty->setValue($annotation, $value);
     }
 
     /**
-     * Checks if a route has the given placeholder in a path.
-     *
-     * @param Route  $route
-     * @param string $placeholder
-     *
-     * @return bool
+     * @param ApiDoc                 $annotation
+     * @param EntityDefinitionConfig $config
      */
-    protected function hasAttribute(Route $route, $placeholder)
+    public function setStatusCodes(ApiDoc $annotation, EntityDefinitionConfig $config)
     {
-        return false !== strpos($route->getPath(), $placeholder);
+        $statusCodes = $config->getStatusCodes();
+        if (null !== $statusCodes) {
+            $codes = $statusCodes->getCodes();
+            foreach ($codes as $statusCode => $code) {
+                if (!$code->isExcluded()) {
+                    $annotation->addStatusCode($statusCode, $code->getDescription());
+                }
+            }
+        }
     }
 }

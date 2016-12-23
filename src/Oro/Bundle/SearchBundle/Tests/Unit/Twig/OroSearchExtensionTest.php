@@ -10,7 +10,7 @@ class OroSearchExtensionTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $twigService = $this->getMock('Twig_Environment');
+        $twigService = $this->createMock('Twig_Environment');
         $this->extension = new OroSearchExtension($twigService, 'testLayout.html.twig');
     }
 
@@ -45,6 +45,5 @@ class OroSearchExtensionTest extends \PHPUnit_Framework_TestCase
     {
         $filters = $this->extension->getFilters();
         $this->assertEquals(3, count($filters));
-
     }
 }

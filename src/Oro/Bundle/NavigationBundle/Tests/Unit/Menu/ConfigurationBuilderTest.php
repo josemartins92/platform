@@ -2,11 +2,15 @@
 
 namespace Oro\Bundle\NavigationBundle\Tests\Unit\Menu;
 
+use Knp\Menu\FactoryInterface;
+use Knp\Menu\MenuItem;
+
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+
+use Oro\Component\Config\Resolver\SystemAwareResolver;
+use Oro\Bundle\NavigationBundle\Event\ConfigureMenuEvent;
 use Oro\Bundle\NavigationBundle\Menu\AclAwareMenuFactoryExtension;
 use Oro\Bundle\NavigationBundle\Menu\ConfigurationBuilder;
-use Oro\Component\Config\Resolver\SystemAwareResolver;
-
-use Knp\Menu\MenuItem;
 
 class ConfigurationBuilderTest extends \PHPUnit_Framework_TestCase
 {
@@ -20,13 +24,23 @@ class ConfigurationBuilderTest extends \PHPUnit_Framework_TestCase
      */
     protected $factory;
 
+    /** @var FactoryInterface|\PHPUnit_Framework_MockObject_MockObject */
+    protected $menuFactory;
+
+    /** @var EventDispatcherInterface|\PHPUnit_Framework_MockObject_MockObject */
+    protected $eventDispatcher;
+
     protected function setUp()
     {
         $resolver = new SystemAwareResolver();
-        $this->configurationBuilder = new ConfigurationBuilder($resolver);
+
+        $this->menuFactory = $this->createMock('Knp\Menu\FactoryInterface');
+        $this->eventDispatcher = $this->createMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
+
+        $this->configurationBuilder = new ConfigurationBuilder($resolver, $this->menuFactory, $this->eventDispatcher);
 
         $this->factory = $this->getMockBuilder('Knp\Menu\MenuFactory')
-            ->setMethods(array('getRouteInfo', 'processRoute'))
+            ->setMethods(['getRouteInfo', 'processRoute'])
             ->getMock();
 
         $this->factory->expects($this->any())
@@ -47,7 +61,13 @@ class ConfigurationBuilderTest extends \PHPUnit_Framework_TestCase
         $this->configurationBuilder->setConfiguration($options);
 
         $menu = new MenuItem('navbar', $this->factory);
-        $this->configurationBuilder->build($menu, array(), 'navbar');
+
+        $this->eventDispatcher
+            ->expects($this->once())
+            ->method('dispatch')
+            ->with('oro_menu.configure.navbar', new ConfigureMenuEvent($this->menuFactory, $menu));
+
+        $this->configurationBuilder->build($menu, [], 'navbar');
 
         $this->assertCount(2, $menu->getChildren());
         $this->assertEquals($options['tree']['navbar']['type'], $menu->getExtra('type'));
@@ -59,68 +79,191 @@ class ConfigurationBuilderTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @dataProvider setAreaToExtraProvider
+     * @param array $options
+     * @param string $expectedArea
+     */
+    public function testSetAreaToExtra($options, $expectedArea)
+    {
+        $this->configurationBuilder->setConfiguration($options);
+
+        $menu = new MenuItem('navbar', $this->factory);
+        $this->configurationBuilder->build($menu, [], 'navbar');
+
+        $this->assertEquals($expectedArea, $menu->getExtra('scope_type'));
+    }
+
+    public function setAreaToExtraProvider()
+    {
+        return [
+            'with no scope type specified' => [
+                'options' => [
+                    'items' => [
+                        'homepage' => [
+                            'name' => 'Home page 2',
+                            'label' => 'Home page title',
+                            'route' => 'oro_menu_index',
+                            'translateDomain' => 'SomeBundle',
+                            'translateParameters' => [],
+                            'routeParameters' => [],
+                            'extras' => []
+                        ]
+                    ],
+                    'tree' => [
+                        'navbar' => [
+                            'type' => 'navbar',
+                            'children' => [
+                                'homepage' => [
+                                    'position' => 7,
+                                    'children' => []
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                'expectedArea' => 'menu_default_visibility',
+            ],
+            'with scope type' => [
+                'options' => [
+                    'items' => [
+                        'homepage' => [
+                            'name' => 'Home page 2',
+                            'label' => 'Home page title',
+                            'route' => 'oro_menu_index',
+                            'translateDomain' => 'SomeBundle',
+                            'translateParameters' => [],
+                            'routeParameters' => [],
+                            'extras' => []
+                        ]
+                    ],
+                    'tree' => [
+                        'navbar' => [
+                            'type' => 'navbar',
+                            'scope_type' => 'frontend',
+                            'children' => [
+                                'homepage' => [
+                                    'position' => 7,
+                                    'children' => []
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                'expectedArea' => 'frontend',
+            ]
+        ];
+    }
+
+    /**
      * @return array
      */
     public function menuStructureProvider()
     {
-        return array(
-            'full_menu' => array(array(
-                'templates' => array(
-                    'navbar' => array(
+        return [
+            'full_menu' => [[
+                'areas' => [],
+                'templates' => [
+                    'navbar' => [
                         'template' => 'OroNavigationBundle:Menu:navbar.html.twig'
-                        ),
-                    'dropdown' => array(
+                    ],
+                    'dropdown' => [
                         'template' => 'OroNavigationBundle:Menu:dropdown.html.twig'
-                    )
-                ),
-                'items' => array(
-                    'homepage' => array(
+                    ]
+                ],
+                'items' => [
+                    'homepage' => [
                         'name' => 'Home page 2',
                         'label' => 'Home page title',
                         'route' => 'oro_menu_index',
                         'translateDomain' => 'SomeBundle',
-                        'translateParameters' => array(),
-                        'routeParameters' => array(),
-                        'extras' => array()
-                    ),
-                    'user_registration_register' => array(
+                        'translateParameters' => [],
+                        'translate_disabled' => false,
+                        'routeParameters' => [],
+                        'extras' => []
+                    ],
+                    'user_registration_register' => [
                         'route' => 'oro_menu_submenu',
                         'translateDomain' => 'SomeBundle',
-                        'translateParameters' => array(),
-                        'routeParameters' => array(),
-                        'extras' => array()
-                    ),
-                    'user_user_show' => array(
+                        'translateParameters' => [],
+                        'translate_disabled' => true,
+                        'routeParameters' => [],
+                        'extras' => []
+                    ],
+                    'user_user_show' => [
                         'translateDomain' => 'SomeBundle',
-                        'translateParameters' => array(),
-                        'routeParameters' => array(),
-                        'extras' => array()
-                    ),
-                ),
-                'tree' => array(
-                    'navbar' => array(
+                        'translateParameters' => [],
+                        'routeParameters' => [],
+                        'extras' => []
+                    ],
+                ],
+                'tree' => [
+                    'navbar' => [
                         'type' => 'navbar',
-                        'extras' => array(
+                        'extras' => [
                             'brand' => 'Oro',
                             'brandLink' => '/'
-                        ),
-                        'children' => array(
-                            'user_user_show' => array(
+                        ],
+                        'children' => [
+                            'user_user_show' => [
                                 'position' => '10',
-                                'children' => array(
-                                    'user_registration_register' => array(
-                                        'children' => array()
-                                    )
-                                )
-                            ),
-                            'homepage' => array(
+                                'children' => [
+                                    'user_registration_register' => [
+                                        'children' => []
+                                    ]
+                                ]
+                            ],
+                            'homepage' => [
                                 'position' => 7,
-                                'children' => array()
-                            )
-                        )
-                    )
-                )
-            ))
-        );
+                                'children' => []
+                            ]
+                        ]
+                    ]
+                ]
+            ]]
+        ];
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @expectedExceptionMessage Item key "user_user_show" duplicated in tree menu "navbar".
+     */
+    public function testBuildDuplicatedItemTreeCallException()
+    {
+        $options = [
+            'areas' => [],
+            'items' => [
+                'user_registration_register' => [
+                    'route' => 'oro_menu_submenu',
+                    'extras' => []
+                ],
+                'user_user_show' => [
+                    'translateDomain' => 'SomeBundle',
+                    'extras' => []
+                ],
+            ],
+            'tree' => [
+                'navbar' => [
+                    'type' => 'navbar',
+                    'extras' => [],
+                    'children' => [
+                        'user_user_show' => [
+                            'position' => '10',
+                            'children' => [
+                                'user_registration_register' => [
+                                    'children' => [
+                                        'user_user_show' => [
+                                            'children' => []
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+        $this->configurationBuilder->setConfiguration($options);
+        $menu = new MenuItem('navbar', $this->factory);
+        $this->configurationBuilder->build($menu, [], 'navbar');
     }
 }

@@ -7,8 +7,6 @@ services:
             - get_relationship
             - '@oro_api.config_provider'
             - '@oro_api.metadata_provider'
-        tags:
-            - { name: oro.api.action_processor }
 
     #
     # initialize
@@ -48,10 +46,11 @@ services:
         tags:
             - { name: oro.api.processor, action: get_relationship, group: initialize, collection: true, priority: -10 }
 
-    oro_api.get_relationship.register_filters:
-        class: Oro\Bundle\ApiBundle\Processor\Shared\RegisterFilters
+    oro_api.get_relationship.register_configured_filters:
+        class: Oro\Bundle\ApiBundle\Processor\Shared\RegisterConfiguredFilters
         arguments:
             - '@oro_api.filter_factory'
+            - '@oro_api.doctrine_helper'
         tags:
             - { name: oro.api.processor, action: get_relationship, group: initialize, collection: true, priority: -50 }
 
@@ -61,6 +60,15 @@ services:
             - '@oro_api.doctrine_helper'
         tags:
             - { name: oro.api.processor, action: get_relationship, group: initialize, collection: true, requestType: json_api, priority: -55 }
+
+    oro_api.get_relationship.register_dynamic_filters:
+        class: Oro\Bundle\ApiBundle\Processor\Shared\RegisterDynamicFilters
+        arguments:
+            - '@oro_api.filter_factory'
+            - '@oro_api.doctrine_helper'
+            - '@oro_api.config_provider'
+        tags:
+            - { name: oro.api.processor, action: get_relationship, group: initialize, collection: true, priority: -60 }
 
     oro_api.get_relationship.rest.set_default_sorting:
         class: Oro\Bundle\ApiBundle\Processor\Shared\Rest\SetDefaultSorting
@@ -157,9 +165,6 @@ services:
 
     oro_api.get_relationship.build_criteria:
         class: Oro\Bundle\ApiBundle\Processor\Shared\BuildCriteria
-        arguments:
-            - '@oro_api.config_provider'
-            - '@oro_api.doctrine_helper'
         tags:
             - { name: oro.api.processor, action: get_relationship, group: build_query, collection: true, priority: 50 }
 
@@ -186,6 +191,14 @@ services:
     #
     # load_data
     #
+
+    oro_api.get_relationship.load_extended_association:
+        class: Oro\Bundle\ApiBundle\Processor\Subresource\Shared\LoadExtendedAssociation
+        arguments:
+            - '@oro_api.entity_serializer'
+            - '@oro_api.doctrine_helper'
+        tags:
+            - { name: oro.api.processor, action: get_relationship, group: load_data }
 
     oro_api.get_relationship.load_data_by_entity_serializer.collection:
         class: Oro\Bundle\ApiBundle\Processor\Shared\LoadEntitiesByEntitySerializer
@@ -291,10 +304,15 @@ services:
             - { name: oro.api.processor, action: get_relationship, group: normalize_result, collection: false, requestType: json_api, priority: -55 }
             - { name: monolog.logger, channel: api }
 
+    oro_api.get_relationship.set_result_document:
+        class: Oro\Bundle\ApiBundle\Processor\Shared\SetResultDocument
+        tags:
+            - { name: oro.api.processor, action: get_relationship, group: normalize_result, priority: -150 }
+
     oro_api.get_relationship.rest.process_errors:
         class: Oro\Bundle\ApiBundle\Processor\Shared\ProcessErrors
         tags:
-            - { name: oro.api.processor, action: get_relationship, group: normalize_result, requestType: rest, priority: -100 }
+            - { name: oro.api.processor, action: get_relationship, group: normalize_result, requestType: rest, priority: -190 }
 
     oro_api.get_relationship.validate_normalized_result_exists:
         class: Oro\Bundle\ApiBundle\Processor\Shared\ValidateNormalizedResultExists

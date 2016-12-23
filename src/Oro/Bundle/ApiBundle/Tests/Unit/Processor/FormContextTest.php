@@ -2,6 +2,7 @@
 
 namespace Oro\Bundle\ApiBundle\Tests\Unit\Processor;
 
+use Oro\Bundle\ApiBundle\Collection\IncludedEntityCollection;
 use Oro\Bundle\ApiBundle\Processor\FormContext;
 
 class FormContextTest extends \PHPUnit_Framework_TestCase
@@ -28,9 +29,28 @@ class FormContextTest extends \PHPUnit_Framework_TestCase
         $this->assertSame($requestData, $this->context->getRequestData());
     }
 
+    public function testIncludedData()
+    {
+        $includedData = [];
+        $this->context->setIncludedData($includedData);
+        $this->assertSame($includedData, $this->context->getIncludedData());
+    }
+
+    public function testIncludedEntities()
+    {
+        $this->assertNull($this->context->getIncludedEntities());
+
+        $includedEntities = $this->createMock(IncludedEntityCollection::class);
+        $this->context->setIncludedEntities($includedEntities);
+        $this->assertSame($includedEntities, $this->context->getIncludedEntities());
+
+        $this->context->setIncludedEntities();
+        $this->assertNull($this->context->getIncludedEntities());
+    }
+
     public function testFormBuilder()
     {
-        $formBuilder = $this->getMock('Symfony\Component\Form\FormBuilderInterface');
+        $formBuilder = $this->createMock('Symfony\Component\Form\FormBuilderInterface');
 
         $this->assertFalse($this->context->hasFormBuilder());
         $this->assertNull($this->context->getFormBuilder());
@@ -46,7 +66,7 @@ class FormContextTest extends \PHPUnit_Framework_TestCase
 
     public function testForm()
     {
-        $form = $this->getMock('Symfony\Component\Form\FormInterface');
+        $form = $this->createMock('Symfony\Component\Form\FormInterface');
 
         $this->assertFalse($this->context->hasForm());
         $this->assertNull($this->context->getForm());

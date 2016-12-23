@@ -8,7 +8,7 @@ use Oro\Bundle\IntegrationBundle\Manager\FieldsChangesManager;
 use Oro\Bundle\IntegrationBundle\Model\Action\SaveFieldsChangesAction;
 use Oro\Bundle\WorkflowBundle\Model\ProcessData;
 
-use Oro\Component\Action\Model\ContextAccessor;
+use Oro\Component\ConfigExpression\ContextAccessor;
 
 class SaveFieldsChangesActionTest extends \PHPUnit_Framework_TestCase
 {
@@ -36,10 +36,8 @@ class SaveFieldsChangesActionTest extends \PHPUnit_Framework_TestCase
     public function testInitializeFailed(array $options, $message = null)
     {
         if ($message) {
-            $this->setExpectedException(
-                'Oro\Component\Action\Exception\InvalidParameterException',
-                $message
-            );
+            $this->expectException('Oro\Component\Action\Exception\InvalidParameterException');
+            $this->expectExceptionMessage($message);
         }
 
         $this->action->initialize($options);
@@ -107,7 +105,7 @@ class SaveFieldsChangesActionTest extends \PHPUnit_Framework_TestCase
         return [
             [
                 [
-                    'entity'    => new PropertyPath('entity'),
+                    'entity'    => new PropertyPath('data'),
                     'changeSet' => new PropertyPath('changeSet'),
                 ],
                 [

@@ -4,6 +4,10 @@ namespace Oro\Bundle\LayoutBundle\Assetic;
 
 use Assetic\Factory\Resource\ResourceInterface;
 
+use Psr\Log\LoggerInterface;
+
+use Symfony\Component\Filesystem\Filesystem;
+
 use Oro\Component\Layout\Extension\Theme\Model\Theme;
 use Oro\Component\Layout\Extension\Theme\Model\ThemeManager;
 use Oro\Component\PhpUtils\ArrayUtil;
@@ -15,12 +19,43 @@ class LayoutResource implements ResourceInterface
     /** @var ThemeManager */
     protected $themeManager;
 
+    /** @var Filesystem */
+    protected $filesystem;
+
+    /** @var string */
+    protected $outputDir;
+
+    /** @var array */
+    protected $mtimeOutputs = [];
+
+    /** @var LoggerInterface */
+    private $logger;
+
     /**
      * @param ThemeManager $themeManager
+     * @param Filesystem $filesystem
+     * @param string $outputDir
      */
-    public function __construct(ThemeManager $themeManager)
-    {
+    public function __construct(
+        ThemeManager $themeManager,
+        Filesystem $filesystem,
+        $outputDir
+    ) {
         $this->themeManager = $themeManager;
+        $this->filesystem = $filesystem;
+        $this->outputDir = $outputDir;
+    }
+
+    /**
+     * @param LoggerInterface $logger
+     *
+     * @return LayoutResource
+     */
+    public function setLogger(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
+
+        return $this;
     }
 
     /**
@@ -28,7 +63,16 @@ class LayoutResource implements ResourceInterface
      */
     public function isFresh($timestamp)
     {
-        return true;
+        $maxLastModified = 0;
+
+        foreach ($this->themeManager->getAllThemes() as $theme) {
+            $assets = $this->collectThemeAssets($theme);
+            foreach ($assets as $assetKey => $asset) {
+                $maxLastModified = max($maxLastModified, $this->getLastModified($asset['inputs']));
+            }
+        }
+
+        return $maxLastModified > $timestamp;
     }
 
     /**
@@ -65,6 +109,7 @@ class LayoutResource implements ResourceInterface
                 continue;
             }
             $name = self::RESOURCE_ALIAS . '_' . $theme->getName(). '_' . $assetKey;
+            $asset = $this->prepareAssets($asset);
             $formulae[$name] = [
                 $asset['inputs'],
                 $asset['filters'],
@@ -92,5 +137,96 @@ class LayoutResource implements ResourceInterface
         }
 
         return $assets;
+    }
+
+    /**
+     * @param array $asset
+     * @return array
+     */
+    protected function prepareAssets($asset)
+    {
+        $inputs = $asset['inputs'];
+        $inputsByExtension = [];
+        foreach ($inputs as $input) {
+            $inputsByExtension[pathinfo($input)['extension']][] = $input;
+        }
+
+        $inputs = [];
+
+        // Merge .less files first, than -> .scss into cumulative .css for theme
+        ksort($inputsByExtension);
+
+        foreach ($inputsByExtension as $extension => $extensionInputs) {
+            if ($extension === 'css' || count($extensionInputs) === 1) {
+                $inputs = array_merge($inputs, $extensionInputs);
+            } else {
+                $inputs[] = $this->joinInputs($asset['output'], $extension, $extensionInputs);
+            }
+        }
+
+        $asset['inputs'] = $inputs;
+        return $asset;
+    }
+
+    /**
+     * @param array $output
+     * @param string $extension
+     * @param array $inputs
+     * @return string
+     */
+    protected function joinInputs($output, $extension, $inputs)
+    {
+        $settingsInputs = [];
+        $variablesInputs = [];
+        $restInputs = [];
+        foreach ($inputs as $input) {
+            if (strpos($input, '/settings/') !== false) {
+                $settingsInputs[] = $input;
+            } elseif (strpos($input, '/variables/') !== false) {
+                $variablesInputs[] = $input;
+            } else {
+                $restInputs[] = $input;
+            }
+        }
+        $inputs = array_merge($settingsInputs, $variablesInputs, $restInputs);
+
+        $file = realpath($this->outputDir) . '/' . $output . '.'. $extension;
+
+        $mtime = $this->getLastModified($inputs);
+        if (!array_key_exists($file, $this->mtimeOutputs) || $this->mtimeOutputs[$file] < $mtime) {
+            $inputsContent = '';
+            foreach ($inputs as $input) {
+                $inputsContent .= '@import "../' . $input . '"' . ";\n";
+            }
+
+            $this->filesystem->mkdir(dirname($file), 0777);
+            if (false === @file_put_contents($file, $inputsContent)) {
+                throw new \RuntimeException('Unable to write file ' . $file);
+            }
+
+            $this->mtimeOutputs[$file] = $mtime;
+        }
+
+        return $file;
+    }
+
+    /**
+     * @param array  $inputs
+     *
+     * @return int|mixed
+     */
+    private function getLastModified(array $inputs)
+    {
+        $mtime = 0;
+        foreach ($inputs as $input) {
+            $file = realpath($this->outputDir) . '/' . $input;
+            if (file_exists($file)) {
+                $mtime = max($mtime, filemtime($file));
+            } else {
+                $this->logger->debug(sprintf('Could not find file %s, declared in assets.yml.', $input));
+            }
+        }
+
+        return $mtime;
     }
 }

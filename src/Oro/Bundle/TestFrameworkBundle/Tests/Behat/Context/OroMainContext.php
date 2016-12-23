@@ -3,7 +3,6 @@
 namespace Oro\Bundle\TestFrameworkBundle\Tests\Behat\Context;
 
 use Behat\Behat\Context\SnippetAcceptingContext;
-use Behat\Behat\Hook\Scope\BeforeScenarioScope;
 use Behat\Gherkin\Node\TableNode;
 use Behat\Mink\Element\NodeElement;
 use Behat\MinkExtension\Context\MinkContext;
@@ -11,45 +10,62 @@ use Behat\Mink\Exception\ElementNotFoundException;
 use Behat\Symfony2Extension\Context\KernelAwareContext;
 use Behat\Symfony2Extension\Context\KernelDictionary;
 use Doctrine\Common\Inflector\Inflector;
+use Oro\Bundle\AttachmentBundle\Tests\Behat\Element\AttachmentItem;
+use Oro\Bundle\DataGridBundle\Tests\Behat\Element\Grid;
 use Oro\Bundle\FormBundle\Tests\Behat\Element\OroForm;
 use Oro\Bundle\NavigationBundle\Tests\Behat\Element\MainMenu;
 use Oro\Bundle\TestFrameworkBundle\Behat\Driver\OroSelenium2Driver;
 use Oro\Bundle\TestFrameworkBundle\Behat\Context\AssertTrait;
 use Oro\Bundle\TestFrameworkBundle\Behat\Element\CollectionField;
 use Oro\Bundle\TestFrameworkBundle\Behat\Element\Form;
-use Oro\Bundle\TestFrameworkBundle\Behat\Element\OroElementFactoryAware;
+use Oro\Bundle\TestFrameworkBundle\Behat\Element\OroPageObjectAware;
+use Oro\Bundle\UserBundle\Tests\Behat\Element\UserMenu;
 
 /**
- * Defines application features from the specific context.
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
 class OroMainContext extends MinkContext implements
     SnippetAcceptingContext,
-    OroElementFactoryAware,
+    OroPageObjectAware,
     KernelAwareContext
 {
-    use AssertTrait;
-    use KernelDictionary, ElementFactoryDictionary;
+    use AssertTrait, KernelDictionary, PageObjectDictionary;
 
     /**
      * @BeforeScenario
      */
-    public function beforeScenario(BeforeScenarioScope $scope)
+    public function beforeScenario()
     {
         $this->getSession()->resizeWindow(1920, 1080, 'current');
     }
 
     /**
+     * Example: Then I should see "Attachment created successfully" flash message
+     * Example: Then I should see "The email was sent" flash message
+     *
      * @Then /^(?:|I )should see "(?P<title>[^"]+)" flash message$/
      */
     public function iShouldSeeFlashMessage($title)
     {
-        $messageElement = $this->spin(function (MinkContext $context) {
-            return $context->getSession()->getPage()->find('css', '.flash-messages-holder div.alert');
+        /** @var NodeElement|false $messageElement */
+        $messageElement = $this->spin(function (OroMainContext $context) use ($title) {
+            $flashMessage = $context->findElementContains('Flash Message', $title);
+
+            if ($flashMessage->isValid() && $flashMessage->isVisible()) {
+                return $flashMessage;
+            }
+
+            return false;
         });
 
         self::assertNotFalse($messageElement, 'Flash message not found on page');
         $flashMessage = $messageElement->getText();
-        $messageElement->find('css', 'button.close')->press();
+
+        $closeButton = $messageElement->find('css', 'button.close');
+
+        if ($closeButton->isVisible()) {
+            $closeButton->press();
+        }
 
         self::assertContains($title, $flashMessage, sprintf(
             'Expect that "%s" flash message contains "%s" string, but it isn\'t',
@@ -105,7 +121,7 @@ class OroMainContext extends MinkContext implements
      */
     public function spin(\Closure $lambda)
     {
-        $time = 6;
+        $time = 60;
 
         while ($time > 0) {
             try {
@@ -124,18 +140,15 @@ class OroMainContext extends MinkContext implements
     }
 
     /**
-     * @Then /^(?:|I )click update schema$/
+     * Assert that page hase h1 header
+     * Example: And page has "My own custom dashboard" header
+     * Example: Then page has "Dashboard" header
+     *
+     * @Then page has :header header
      */
-    public function iClickUpdateSchema()
+    public function pageHasHeader($header)
     {
-        /** @var OroSelenium2Driver $driver */
-        $driver = $this->getSession()->getDriver();
-        $page = $this->getPage();
-
-        $page->clickLink('Update schema');
-        $driver->waitForAjax();
-        $page->clickLink('Yes, Proceed');
-        $driver->waitForAjax(120000);
+        $this->assertSession()->elementTextContains('css', 'div#container h1', $header);
     }
 
     /**
@@ -146,6 +159,16 @@ class OroMainContext extends MinkContext implements
     public function closeErrorMessage()
     {
         $this->createOroForm()->find('css', '.alert-error button.close')->press();
+    }
+
+    /**
+     * Close UI dialog popup
+     *
+     * @Then /^(?:|I )close ui dialog$/
+     */
+    public function closeUiDialog()
+    {
+        $this->getSession()->getPage()->find('css', 'button.ui-dialog-titlebar-close')->press();
     }
 
     /**
@@ -170,7 +193,7 @@ class OroMainContext extends MinkContext implements
      *            | Users       | [Charlie, Pitt] |
      *            | Date        | 2017-08-24      |
      *
-     * @When /^(?:|I )fill "(?P<formName>(?:[^"]|\\")*)" form with:$/
+     * @When /^(?:|I )fill "(?P<formName>(?:[^"]|\\")*)" with:$/
      * @When /^(?:|I )fill form with:$/
      */
     public function iFillFormWith(TableNode $table, $formName = "OroForm")
@@ -178,6 +201,23 @@ class OroMainContext extends MinkContext implements
         /** @var Form $form */
         $form = $this->createElement($formName);
         $form->fill($table);
+    }
+
+    /**
+     * Assert form fields values
+     * Example: And "User" form must contains values:
+     *            | Username          | charlie           |
+     *            | First Name        | Charlie           |
+     *            | Last Name         | Sheen             |
+     *            | Primary Email     | charlie@sheen.com |
+     *
+     * @Then /^"(?P<formName>(?:[^"]|\\")*)" must contains values:$/
+     */
+    public function formMustContainsValues($formName, TableNode $table)
+    {
+        /** @var Form $form */
+        $form = $this->createElement($formName);
+        $form->assertFields($table);
     }
 
     /**
@@ -230,48 +270,58 @@ class OroMainContext extends MinkContext implements
         /** @var Form $fieldSet */
         $fieldSet = $this->createOroForm()->findField(ucfirst(Inflector::pluralize($fieldSetLabel)));
         $fieldSet->clickLink('Add');
-        $this->getSession()->getDriver()->waitForAjax();
+        $this->waitForAjax();
         $form = $fieldSet->getLastSet();
         $form->fill($table);
     }
 
     /**
-     * @Given /^(?:|I )login as "(?P<login>(?:[^"]|\\")*)" user with "(?P<password>(?:[^"]|\\")*)" password$/
+     * Open dashboard login page and login as existing user
+     * Demo user should have password the same as username, e.g. username: charlie, password: charlie
+     * Example: Given I login as administrator
+     * Example: Given I login as "charlie" user
+     *
+     * @Given /^(?:|I )login as "(?P<loginAndPassword>(?:[^"]|\\")*)" user$/
      * @Given /^(?:|I )login as administrator$/
      */
-    public function loginAsUserWithPassword($login = 'admin', $password = 'admin')
+    public function loginAsUserWithPassword($loginAndPassword = 'admin')
     {
-        $this->visit('user/login');
-        $this->fillField('_username', $login);
-        $this->fillField('_password', $password);
+        $uri = $this->getContainer()->get('router')->generate('oro_user_security_login');
+        $this->visit($uri);
+        $this->fillField('_username', $loginAndPassword);
+        $this->fillField('_password', $loginAndPassword);
         $this->pressButton('_submit');
-
     }
 
     /**
      * Example: Given I click My Emails in user menu
+     * Example: Given I click My Calendar in user menu
      *
      * @Given /^(?:|I )click (?P<needle>[\w\s]+) in user menu$/
      */
     public function iClickLinkInUserMenu($needle)
     {
+        /** @var UserMenu $userMenu */
         $userMenu = $this->createElement('UserMenu');
-        $userMenu->find('css', 'i.icon-sort-down')->click();
-        $links = $userMenu->findAll('css', 'ul.dropdown-menu li a');
-
-        /** @var NodeElement $link */
-        foreach ($links as $link) {
-            if (preg_match(sprintf('/%s/i', $needle), $link->getText())) {
-                $link->click();
-
-                return;
-            }
-        }
-
-        self::fail(sprintf('Can\'t find "%s" item in user menu', $needle));
+        self::assertTrue($userMenu->isValid());
+        $userMenu->open();
+        $userMenu->clickLink($needle);
     }
 
     /**
+     * Click on element on page
+     * Example: When I click on "Help Icon"
+     *
+     * @When /^(?:|I )click on "(?P<element>[\w\s]+)"$/
+     */
+    public function iClickOn($element)
+    {
+        $this->createElement($element)->click();
+    }
+
+    /**
+     * Assert popup with large image on page
+     *
      * @Then /^(?:|I )should see large image$/
      */
     public function iShouldSeeLargeImage()
@@ -290,8 +340,48 @@ class OroMainContext extends MinkContext implements
         $page->find('css', 'span.lg-close')->click();
     }
 
+    /**
+     * Example: When I click on "cat.jpg" attachment thumbnail
+     * Example: And I click on "note-attachment.jpg" attachment thumbnail
+     *
+     * @Then /^(?:|I )click on "(?P<text>[^"]+)" attachment thumbnail$/
+     */
+    public function commentAttachmentShouldProperlyWork($text)
+    {
+        /** @var AttachmentItem $attachmentItem */
+        $attachmentItem = $this->elementFactory->findElementContains('AttachmentItem', $text);
+        self::assertTrue($attachmentItem->isValid(), sprintf('Attachment with "%s" text not found', $text));
+
+        $attachmentItem->clickOnAttachmentThumbnail();
+
+        $thumbnail = $this->getPage()->find('css', "div.thumbnail a[title='$text']");
+        self::assertTrue($thumbnail->isValid(), sprintf('Thumbnail "%s" not found', $text));
+
+        $thumbnail->click();
+    }
+
+    /**
+     * Assert that download link in attachment works properly
+     * Example: And download link for "cat.jpg" attachment should work
+     * Example: And download link for "note-attachment.jpg" attachment should work
+     *
+     * @Then /^download link for "(?P<text>[^"]+)" attachment should work$/
+     */
+    public function downloadLinkForAttachmentShouldWork($text)
+    {
+        /** @var AttachmentItem $attachmentItem */
+        $attachmentItem = $this->elementFactory->findElementContains('AttachmentItem', $text);
+        self::assertTrue($attachmentItem->isValid(), sprintf('Attachment with "%s" text not found', $text));
+
+        $attachmentItem->checkDownloadLink();
+    }
+
      /**
-     * @When /^(?:|I )click "(?P<button>(?:[^"]|\\")*)"$/
+      * Click on button or link
+      * Example: Given I click "Edit"
+      * Example: When I click "Save and Close"
+      *
+      * @When /^(?:|I )click "(?P<button>(?:[^"]|\\")*)"$/
      */
     public function pressButton($button)
     {
@@ -312,7 +402,7 @@ class OroMainContext extends MinkContext implements
      * Example: Given I go to System/ Channels
      * Example: And go to System/ User Management/ Users
      *
-     * @Given /^(?:|I )go to (?P<path>(?:(?!([nN]ewer|[oO]lder) activities)([^"]*)))$/
+     * @Given /^(?:|I )go to (?P<path>(?:(?!([nN]ewer|[oO]lder) activities)(?!.*page)([^"]*)))$/
      */
     public function iOpenTheMenuAndClick($path)
     {
@@ -322,6 +412,46 @@ class OroMainContext extends MinkContext implements
     }
 
     /**
+     * Assert current page
+     * Example: Then I should be on Search Result page
+     * Example: Then I should be on Default Calendar View page
+     *
+     * @Given /^(?:|I )should be on (?P<page>[\w\s\/]+) page$/
+     */
+    public function assertPage($page)
+    {
+        $urlPath = parse_url($this->getSession()->getCurrentUrl(), PHP_URL_PATH);
+        $route = $this->getContainer()->get('router')->match($urlPath);
+
+        self::assertEquals($this->getPage($page)->getRoute(), $route['_route']);
+    }
+
+    /**
+     * Example: Given I open Opportunity Create page
+     * Example: Given I open Account Index page
+     *
+     * @Given /^(?:|I )open (?P<pageName>[\w\s\/]+) page$/
+     */
+    public function openPage($pageName)
+    {
+        $this->getPage($pageName)->open();
+    }
+
+    /**
+     * Example: Given I open "Charlie" Account edit page
+     * Example: When I open "Supper sale" opportunity edit page
+     *
+     * @Given /^(?:|I )open "(?P<title>[\w\s]+)" (?P<entity>[\w\s]+) edit page$/
+     */
+    public function openEntityEditPage($title, $entity)
+    {
+        $pageName = preg_replace('/\s+/', ' ', ucwords($entity)).' Edit';
+        $this->getPage($pageName)->open(['title' => $title]);
+    }
+
+    /**
+     * Example: And press select entity button on Owner field
+     *
      * @Given press select entity button on :field field
      */
     public function pressSelectEntityButton($field)
@@ -338,19 +468,11 @@ class OroMainContext extends MinkContext implements
     }
 
     /**
-     * @When /^(?:|I )save form$/
+     * @When /^(?:|I )(save|submit) form$/
      */
     public function iSaveForm()
     {
         $this->createOroForm()->save();
-    }
-
-    /**
-     * @Given /^(?:|I |I'm )edit entity$/
-     */
-    public function iMEditEntity()
-    {
-        $this->createElement('Entity Edit Button')->click();
     }
 
     /**
@@ -371,6 +493,10 @@ class OroMainContext extends MinkContext implements
     }
 
     /**
+     * Assert entity owner
+     * Example: And Harry Freeman should be an owner
+     * Example: And Todd Greene should be an owner
+     *
      * @When /^([\w\s]*) should be an owner$/
      */
     public function userShouldBeAnOwner($owner)
@@ -384,8 +510,11 @@ class OroMainContext extends MinkContext implements
     /**
      * Find and assert field value
      * It's valid for entity edit or entity view page
+     * Example: And Account Name field should has Good Company value
+     * Example: And Account Name field should has Good Company value
+     * Example: And Description field should has Our new partner value
      *
-     * @When /^([\w\s]*) field should have ([\w\s]*) value$/
+     * @When /^(?P<fieldName>[\w\s]*) field should has (?P<fieldValue>.+) value$/
      */
     public function fieldShouldHaveValue($fieldName, $fieldValue)
     {
@@ -413,11 +542,39 @@ class OroMainContext extends MinkContext implements
     }
 
     /**
-     * Assert text by label in page. Accept regexp as parameter to label
+     * Inline edit field
+     * Example: When I edit Status as "Open"
+     * Example: Given I edit Probability as "30"
+     *
+     * @When /^(?:|I )edit (?P<field>.+) as "(?P<value>.*)"$/
+     * @When /^(?:|I )edit "(?P<entityTitle>[^"]+)" (?P<field>.+) as "(?P<value>.*)"$/
+     */
+    public function inlineEditField($field, $value, $entityTitle = null)
+    {
+        /** @var Grid $grid */
+        $grid = $this->createElement('Grid');
+
+        if (null === $entityTitle) {
+            $row = $grid->getRowByContent($entityTitle);
+        } else {
+            $rows = $grid->getRows();
+            self::assertCount(1, $rows, sprintf('Expect one row in grid but got %s.'.
+                PHP_EOL.'You can specify row content for edit field in specific row.'));
+
+            $row = array_shift($rows);
+        }
+
+        $row->setCellValue($field, $value);
+        $this->iShouldSeeFlashMessage('Inline edits are being saved');
+        $this->iShouldSeeFlashMessage('Record has been succesfully updated');
+    }
+
+    /**
+     * Assert text by label in page.
      * Example: Then I should see call with:
      *            | Subject             | Proposed Charlie to star in new film |
      *            | Additional comments | Charlie was in a good mood           |
-     *            | Call date & time    | Aug 24, 2017,? 11:00 AM              |
+     *            | Call date & time    | Aug 24, 2017, 11:00 AM               |
      *            | Phone number        | (310) 475-0859                       |
      *            | Direction           | Outgoing                             |
      *            | Duration            | 5:30                                 |
@@ -429,21 +586,25 @@ class OroMainContext extends MinkContext implements
         $page = $this->getSession()->getPage();
 
         foreach ($table->getRows() as $row) {
-            $labels = $page->findAll('xpath', sprintf('//label[text()="%s"]', $row[0]));
+            list($label, $value) = $row;
+            $labelElement = $this->findElementContains('Label', $label);
+            $labels = $page->findAll('xpath', $labelElement->getXpath());
 
-            self::assertNotCount(0, $labels, sprintf('Can\'t find "%s" label', $row[0]));
+            self::assertNotCount(0, $labels, sprintf('Can\'t find "%s" label', $label));
 
             /** @var NodeElement $label */
-            foreach ($labels as $label) {
-                $text = $label->getParent()->find('css', 'div.controls div.control-label')->getText();
+            foreach ($labels as $labelElement) {
+                $controlLabel = $labelElement->getParent()->find('css', 'div.controls div.control-label');
+                self::assertNotNull($controlLabel);
+                $text = $controlLabel->getText();
 
-                if (false !== preg_match(sprintf('/%s/i', $row[1]), $text)) {
+                if (false !== stripos($text, $value)) {
                     continue 2;
                 }
             }
 
             self::fail(
-                sprintf('Found %s "%s" labels, but no one has "%s" text value', count($labels), $row[0], $row[1])
+                sprintf('Found %s "%s" labels, but no one has "%s" text value', count($labels), $label, $value)
             );
         }
     }
@@ -456,6 +617,64 @@ class OroMainContext extends MinkContext implements
         $select = $this->fixStepArgument($select);
         $option = $this->fixStepArgument($option);
         $this->createOroForm()->selectFieldOption($select, $option);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function fillField($field, $value)
+    {
+        $field = $this->fixStepArgument($field);
+        $value = $this->fixStepArgument($value);
+        $this->createOroForm()->fillField($field, $value);
+    }
+
+    /**
+     * Assert that field is required
+     * Example: Then Opportunity Name is a required field
+     * Example: Then Opportunity Name is a required field
+     *
+     * @Then /^(?P<label>[\w\s]+) is a required field$/
+     */
+    public function fieldIsRequired($label)
+    {
+        $labelElement = $this->getPage()->findElementContains('Label', $label);
+        self::assertTrue($labelElement->hasClass('required'));
+    }
+
+    /**
+     * Type value in field chapter by chapter. Imitate real user input from keyboard
+     * Example: And type "Common" in "search"
+     * Example: When I type "Create" in "Enter shortcut action"
+     *
+     * @When /^(?:|I )type "(?P<value>(?:[^"]|\\")*)" in "(?P<field>(?:[^"]|\\")*)"$/
+     */
+    public function iTypeInFieldWith($locator, $value)
+    {
+        $locator = $this->fixStepArgument($locator);
+        $value = $this->fixStepArgument($value);
+        $field = $this->getPage()->find('named', array('field', $locator));
+        /** @var OroSelenium2Driver $driver */
+        $driver = $this->getSession()->getDriver();
+
+        if (null === $field) {
+            throw new ElementNotFoundException($driver, 'form field', 'id|name|label|value|placeholder', $locator);
+        }
+
+        self::assertTrue($field->isVisible(), "Field with '$locator' was found, but it not visible");
+
+        $driver->typeIntoInput($field->getXpath(), $value);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function assertElementOnPage($element)
+    {
+        self::assertTrue(
+            $this->createElement($element)->isVisible(),
+            sprintf('Element "%s" is not visible, or not present on the page', $element)
+        );
     }
 
     /**.
@@ -482,5 +701,13 @@ class OroMainContext extends MinkContext implements
             default:
                 return (int) $count;
         }
+    }
+
+    /**
+     * @param int $time
+     */
+    protected function waitForAjax($time = 60000)
+    {
+        return $this->getSession()->getDriver()->waitForAjax($time);
     }
 }

@@ -1,7 +1,27 @@
 # OroMessageQueue Bundle
 
+## Table of Contents
+
+ - [Overview](#overview)
+ - [Usage](#usage)
+ - [Supervisord](#supervisord)
+ - [Internals](#internals)
+   - [Structure](#structure)
+   - [Flow](#flow)
+   - [Custom transport](#custom-transport)
+   - [Key Classes](#key-classes)
+ - [Unit and Functional tests](#unit-and-functional-tests)
+
+## Overview
+
 The bundle integrates OroMessageQueue component.
 It adds easy to use configuration layer, register services and tie them together, register handy cli commands.
+
+## Jobs
+
+The bundle provides an entity and a web gui for [the jobs](../../Component/MessageQueue/README.md#jobs). So the jobs are created in the db and have
+a web gui where you can monitor jobs status and interrupt jobs.
+
 
 ## Usage
 
@@ -56,7 +76,7 @@ class FooMessageProcessor implements MessageProcessor, TopicSubscriberInterface
 Register it as a container service and subscribe to the topic:
 
 ```yaml
-orocrm_channel.async.change_integration_status_processor:
+oro_channel.async.change_integration_status_processor:
     class: 'FooMessageProcessor'
     tags:
         - { name: 'oro_message_queue.client.message_processor' }
@@ -129,11 +149,16 @@ You have to provide an implementation for them
 * [MessageConsumeCommand](../../Component/MessageQueue/Client/ConsumeMessagesCommand.php) - A command you use to consume messages.
 * [QueueConsumer](../../Component/MessageQueue/Consumption/QueueConsumer.php) - A class that works inside the command and watch for a new message and once it is get it pass it to a message processor.
 
-## Functional tests
+## Unit and Functional tests
 
-To functionally test that a message was sent, you can use [MessageQueueExtension](./Test/Functional/MessageQueueExtension.php).
+To test that a message was sent in unit and functional tests, you can use `MessageQueueExtension` trait. There are two implementation of this trait, one for unit tests, another for functional tests:
 
-But before you start, you need to register `oro_message_queue.test.message_collector` service for `test` environment.
+- [Oro\Bundle\MessageQueueBundle\Test\Unit\MessageQueueExtension](./Test/Unit/MessageQueueExtension.php) for unit tests
+- [Oro\Bundle\MessageQueueBundle\Test\Functional\MessageQueueExtension](./Test/Functional/MessageQueueExtension.php) for functional tests
+
+Also, in case if you need custom logic for manage sent messages, you can use [Oro\Bundle\MessageQueueBundle\Test\Unit\MessageQueueAssertTrait](./Test/Unit/MessageQueueAssertTrait.php) or [Oro\Bundle\MessageQueueBundle\Test\Functional\MessageQueueAssertTrait](./Test/Functional/MessageQueueAssertTrait.php) traits. 
+
+Before you start to use traits in functional tests, you need to register `oro_message_queue.test.message_collector` service for `test` environment.
 
 ```yaml
 # app/config/config_test.yml
@@ -161,21 +186,74 @@ class SomeTest extends WebTestCase
 
     public function testSingleMessage()
     {
-        // do something that sends a message
-
+        // assert that a message was sent to a topic
         self::assertMessageSent('aFooTopic', 'Something has happened');
+
+        // assert that at least one message was sent to a topic
+        // can be used if a message is not matter
+        self::assertMessageSent('aFooTopic');
     }
 
     public function testSeveralMessages()
     {
-        // do something that sends several messages
-
+        // assert that exactly given messages were sent to a topic
         self::assertMessagesSent(
+            'aFooTopic',
+            [
+                'Something has happened',
+                'Something else has happened',
+            ]
+        );
+        // assert that the exactly given number of messages were sent to a topic
+        // can be used if messages are not matter
+        self::assertMessagesCount('aFooTopic', 2);
+        // also assertCountMessages alias can be used to do the same assertion
+        self::assertCountMessages('aFooTopic');
+    }
+
+    public function testNoMessages()
+    {
+        // assert that no any message was sent to a topic
+        self::assertMessagesEmpty('aFooTopic');
+        // also assertEmptyMessages alias can be used to do the same assertion
+        self::assertEmptyMessages('aFooTopic');
+    }
+
+    public function testAllMessages()
+    {
+        // assert that exactly given messages were sent
+        // NOTE: use this assertion with caution because it is possible
+        // that messages not related to a testing functionality were sent as well
+        self::assertAllMessagesSent(
             [
                 ['topic' => 'aFooTopic', 'message' => 'Something has happened'],
                 ['topic' => 'aFooTopic', 'message' => 'Something else has happened'],
             ]
         );
+    }
+}
+```
+
+In unit tests you are usually need to pass the message producer to a service you test. To fetch correct instance of message producer in the unit tests use `self::getMessageProducer()`, e.g.:
+
+```php
+<?php
+namespace Acme\Bundle\AcmeBundle\Tests\Unit;
+
+use Acme\Bundle\AcmeBundle\SomeClass;
+use Oro\Bundle\MessageQueueBundle\Test\Unit\MessageQueueExtension;
+
+class SomeTest extends \PHPUnit_Framework_TestCase
+{
+    use MessageQueueExtension;
+
+    public function testSingleMessage()
+    {
+        $instance = new SomeClass(self::getMessageProducer());
+        
+        $instance->doSomethind();
+
+        self::assertMessageSent('aFooTopic', 'Something has happened');
     }
 }
 ```

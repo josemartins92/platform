@@ -1,0 +1,4 @@
+.validation-failed, .validation-error {
+    display: block;
+    color: get-color('ui', 'error-dark');
+}

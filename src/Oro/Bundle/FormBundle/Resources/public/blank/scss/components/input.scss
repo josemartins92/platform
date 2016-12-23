@@ -1,0 +1,36 @@
+// @theme: blank
+
+.input {
+    @include base-ui-element($use-base-style-for-input,
+                             $input-padding,
+                             $input-font-size,
+                             $input-font-family,
+                             $input-line-height,
+                             $input-border,
+                             $input-border-radius,
+                             $input-background-color,
+                             $input-color
+                            );
+
+    box-sizing: border-box;
+
+    &::-ms-clear {
+        display: none;
+    }
+
+    @include element-state('hover') {
+        border-color: $input-border-color-hover-state;
+    }
+
+    @include element-state('focus') {
+        border-color: $input-border-color-focus-state;
+    }
+
+    @include element-state('error') {
+        border-color: $input-border-color-error-state;
+    }
+
+    &--short {
+        width: $input-width-short;
+    }
+}

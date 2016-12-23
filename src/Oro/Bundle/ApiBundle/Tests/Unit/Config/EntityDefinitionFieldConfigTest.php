@@ -6,6 +6,7 @@ use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\NotNull;
 
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionFieldConfig;
+use Oro\Bundle\ApiBundle\Util\ConfigUtil;
 
 class EntityDefinitionFieldConfigTest extends \PHPUnit_Framework_TestCase
 {
@@ -55,10 +56,12 @@ class EntityDefinitionFieldConfigTest extends \PHPUnit_Framework_TestCase
         $config = new EntityDefinitionFieldConfig();
         $this->assertFalse($config->hasPropertyPath());
         $this->assertNull($config->getPropertyPath());
+        $this->assertEquals('default', $config->getPropertyPath('default'));
 
         $config->setPropertyPath('path');
         $this->assertTrue($config->hasPropertyPath());
         $this->assertEquals('path', $config->getPropertyPath());
+        $this->assertEquals('path', $config->getPropertyPath('default'));
         $this->assertEquals(['property_path' => 'path'], $config->toArray());
 
         $config->setPropertyPath(null);
@@ -70,6 +73,7 @@ class EntityDefinitionFieldConfigTest extends \PHPUnit_Framework_TestCase
         $config->setPropertyPath('');
         $this->assertFalse($config->hasPropertyPath());
         $this->assertNull($config->getPropertyPath());
+        $this->assertEquals('default', $config->getPropertyPath('default'));
         $this->assertEquals([], $config->toArray());
     }
 

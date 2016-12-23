@@ -10,7 +10,7 @@ use Doctrine\Common\Collections\Expr\Expression;
  * Also this filter supports different kind of comparison:
  * "equal", "not equal", "less than", "less than or equal", "greater than", "greater than or equal".
  */
-class ComparisonFilter extends StandaloneFilter
+class ComparisonFilter extends StandaloneFilter implements FieldAwareFilterInterface
 {
     const NEQ = '!=';
     const LT  = '<';
@@ -22,7 +22,7 @@ class ComparisonFilter extends StandaloneFilter
     protected $field;
 
     /**
-     * Gets a field by which data should be filtered
+     * Gets a field by which the data is filtered.
      *
      * @return string|null
      */
@@ -32,9 +32,7 @@ class ComparisonFilter extends StandaloneFilter
     }
 
     /**
-     * Sets a field by which data should be filtered
-     *
-     * @param string $field
+     * {@inheritdoc}
      */
     public function setField($field)
     {
@@ -63,12 +61,16 @@ class ComparisonFilter extends StandaloneFilter
     }
 
     /**
-     * {@inheritdoc}
+     * Creates an expression that can be used to in WHERE statement to filter data by this filter.
+     *
+     * @param FilterValue|null $value
+     *
+     * @return Expression|null
      */
-    public function createExpression(FilterValue $value = null)
+    protected function createExpression(FilterValue $value = null)
     {
         return null !== $value
-            ? $this->buildExpression($this->field, $value->getOperator(), $value->getValue())
+            ? $this->buildExpression($this->field, $value->getPath(), $value->getOperator(), $value->getValue())
             : null;
     }
 
@@ -76,6 +78,7 @@ class ComparisonFilter extends StandaloneFilter
      * Creates the Expression object that can be used to filter data using the Criteria object.
      *
      * @param string      $field
+     * @param string      $path
      * @param string|null $operator
      * @param mixed       $value
      *
@@ -83,10 +86,10 @@ class ComparisonFilter extends StandaloneFilter
      *
      * @throws \InvalidArgumentException
      */
-    protected function buildExpression($field, $operator, $value)
+    protected function buildExpression($field, $path, $operator, $value)
     {
         if (!$field) {
-            throw new \InvalidArgumentException('Field must not be empty.');
+            throw new \InvalidArgumentException('The Field must not be empty.');
         }
         if (null === $value) {
             throw new \InvalidArgumentException(
@@ -98,7 +101,7 @@ class ComparisonFilter extends StandaloneFilter
             $operator = self::EQ;
         }
         if (in_array($operator, $this->operators, true)) {
-            $expr = $this->doBuildExpression($field, $operator, $value);
+            $expr = $this->doBuildExpression($field, $path, $operator, $value);
             if (null !== $expr) {
                 return $expr;
             }
@@ -111,12 +114,13 @@ class ComparisonFilter extends StandaloneFilter
 
     /**
      * @param string $field
+     * @param string $path
      * @param string $operator
      * @param mixed  $value
      *
      * @return Expression|null
      */
-    protected function doBuildExpression($field, $operator, $value)
+    protected function doBuildExpression($field, $path, $operator, $value)
     {
         switch ($operator) {
             case self::EQ:

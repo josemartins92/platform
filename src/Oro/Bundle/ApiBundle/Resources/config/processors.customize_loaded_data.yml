@@ -1,0 +1,12 @@
+services:
+    oro_api.customize_loaded_data.build_nested_objects:
+        class: Oro\Bundle\ApiBundle\Processor\CustomizeLoadedData\BuildNestedObjects
+        tags:
+            - { name: oro.api.processor, action: customize_loaded_data }
+
+    oro_api.customize_loaded_data.build_extended_associations:
+        class: Oro\Bundle\ApiBundle\Processor\CustomizeLoadedData\BuildExtendedAssociations
+        arguments:
+            - '@oro_entity_extend.association_manager'
+        tags:
+            - { name: oro.api.processor, action: customize_loaded_data }

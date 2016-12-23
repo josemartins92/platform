@@ -9,10 +9,12 @@ use Oro\Bundle\ActionBundle\Model\Operation;
 use Oro\Bundle\ActionBundle\Model\OperationManager;
 
 use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
+use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
 use Oro\Bundle\DataGridBundle\Datasource\ResultRecordInterface;
 use Oro\Bundle\DataGridBundle\Extension\Action\ActionExtension as DatagridActionExtension;
 use Oro\Bundle\DataGridBundle\Extension\Action\Event\ConfigureActionsBefore;
 use Oro\Bundle\DataGridBundle\Tools\GridConfigurationHelper;
+use Oro\Bundle\SearchBundle\Datagrid\Datasource\SearchDatasource;
 
 class OperationListener
 {
@@ -76,6 +78,11 @@ class OperationListener
     {
         $config = $event->getConfig();
 
+        // datasource types other than ORM are not handled
+        if ($config->getDatasourceType() !== OrmDatasource::TYPE) {
+            return;
+        }
+
         $this->datagridContext = $this->getDatagridContext($config);
         $this->operations = $this->getOperations(
             $config->offsetGetOr(DatagridActionExtension::ACTION_KEY, []),
@@ -127,19 +134,14 @@ class OperationListener
     protected function getRowConfigurationClosure($actionConfiguration)
     {
         return function (ResultRecordInterface $record, array $config) use ($actionConfiguration) {
-            $actionsNew = [];
-            foreach ($this->operations as $operationName => $operation) {
-                $actionsNew[$operationName] = $this->getRowOperationConfig(
-                    $operation,
-                    $record->getValue('id')
-                );
-            }
-
             $configuration = $this->retrieveConfiguration($actionConfiguration, $record, $config);
 
-            foreach ($actionsNew as $name => $action) {
-                if (!array_key_exists($name, $configuration) || $configuration[$name] !== false) {
-                    $configuration[$name] = $action;
+            foreach ($this->operations as $operationName => $operation) {
+                if (!array_key_exists($operationName, $configuration) || $configuration[$operationName] !== false) {
+                    $configuration[$operationName] = $this->getRowOperationConfig(
+                        $operation,
+                        $record->getValue('id')
+                    );
                 }
             }
 
@@ -192,7 +194,7 @@ class OperationListener
 
         $frontendOptions = $this->optionsHelper->getFrontendOptions($operation, $context);
 
-        return $frontendOptions['options'];
+        return array_merge($frontendOptions['options'], $frontendOptions['data']);
     }
 
     /**
@@ -215,7 +217,7 @@ class OperationListener
         $actionsConfig = $config->offsetGetOr(DatagridActionExtension::ACTION_KEY, []);
 
         foreach ($this->operations as $operationName => $operation) {
-            $actionsConfig[$operationName] = $this->getRowsActionsConfig($operation, $operationName);
+            $actionsConfig[$operationName] = $this->getRowsActionsConfig($operation);
         }
 
         $config->offsetSet(DatagridActionExtension::ACTION_KEY, $actionsConfig);
@@ -223,24 +225,31 @@ class OperationListener
 
     /**
      * @param Operation $operation
-     * @param string $operationName
      * @return array
      */
-    protected function getRowsActionsConfig(Operation $operation, $operationName)
+    protected function getRowsActionsConfig(Operation $operation)
     {
         $buttonOptions = $operation->getDefinition()->getButtonOptions();
-        $icon = !empty($buttonOptions['icon']) ? str_ireplace('icon-', '', $buttonOptions['icon']) : 'edit';
+        $icon = !empty($buttonOptions['icon']) ? str_ireplace('fa-', '', $buttonOptions['icon']) : 'pencil-square-o';
 
-        return [
-            'type' => 'action-widget',
-            'label' => $operation->getDefinition()->getLabel(),
-            'rowAction' => false,
-            'link' => '#',
-            'icon' => $icon,
-            'options' => [
-                'operationName' => $operationName,
-            ]
-        ];
+        $datagridOptions = $operation->getDefinition()->getDatagridOptions();
+
+        $config = array_merge(
+            [
+                'type' => 'action-widget',
+                'label' => $operation->getDefinition()->getLabel(),
+                'rowAction' => false,
+                'link' => '#',
+                'icon' => $icon,
+            ],
+            isset($datagridOptions['data']) ? $datagridOptions['data'] : []
+        );
+
+        if ($operation->getDefinition()->getOrder()) {
+            $config['order'] = $operation->getDefinition()->getOrder();
+        }
+
+        return $config;
     }
 
     /**

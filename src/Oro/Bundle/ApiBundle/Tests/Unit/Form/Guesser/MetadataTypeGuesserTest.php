@@ -4,11 +4,15 @@ namespace Oro\Bundle\ApiBundle\Tests\Unit\Form\Guesser;
 
 use Symfony\Component\Form\Guess\TypeGuess;
 
+use Oro\Bundle\ApiBundle\Config\ConfigAccessorInterface;
+use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
+use Oro\Bundle\ApiBundle\Collection\IncludedEntityCollection;
 use Oro\Bundle\ApiBundle\Form\Guesser\MetadataTypeGuesser;
 use Oro\Bundle\ApiBundle\Metadata\AssociationMetadata;
 use Oro\Bundle\ApiBundle\Metadata\EntityMetadata;
 use Oro\Bundle\ApiBundle\Metadata\FieldMetadata;
 use Oro\Bundle\ApiBundle\Metadata\MetadataAccessorInterface;
+use Oro\Bundle\ApiBundle\Util\ConfigUtil;
 
 class MetadataTypeGuesserTest extends \PHPUnit_Framework_TestCase
 {
@@ -18,15 +22,21 @@ class MetadataTypeGuesserTest extends \PHPUnit_Framework_TestCase
     /** @var MetadataTypeGuesser */
     protected $typeGuesser;
 
+    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    protected $doctrineHelper;
+
     protected function setUp()
     {
+        $this->doctrineHelper = $this->getMockBuilder('Oro\Bundle\ApiBundle\Util\DoctrineHelper')
+            ->disableOriginalConstructor()
+            ->getMock();
         $this->typeGuesser = new MetadataTypeGuesser(
             [
                 'integer'  => ['integer', []],
                 'datetime' => ['test_datetime', ['model_timezone' => 'UTC', 'view_timezone' => 'UTC']],
-            ]
+            ],
+            $this->doctrineHelper
         );
-        $this->typeGuesser->setMetadataAccessor(null);
     }
 
     /**
@@ -36,7 +46,7 @@ class MetadataTypeGuesserTest extends \PHPUnit_Framework_TestCase
      */
     protected function getMetadataAccessor(EntityMetadata $metadata = null)
     {
-        $metadataAccessor = $this->getMock('Oro\Bundle\ApiBundle\Metadata\MetadataAccessorInterface');
+        $metadataAccessor = $this->createMock('Oro\Bundle\ApiBundle\Metadata\MetadataAccessorInterface');
         if (null === $metadata) {
             $metadataAccessor->expects($this->once())
                 ->method('getMetadata')
@@ -49,6 +59,29 @@ class MetadataTypeGuesserTest extends \PHPUnit_Framework_TestCase
         }
 
         return $metadataAccessor;
+    }
+
+    /**
+     * @param string                      $className
+     * @param EntityDefinitionConfig|null $config
+     *
+     * @return ConfigAccessorInterface
+     */
+    protected function getConfigAccessor($className, EntityDefinitionConfig $config = null)
+    {
+        $configAccessor = $this->createMock('Oro\Bundle\ApiBundle\Config\ConfigAccessorInterface');
+        if (null === $config) {
+            $configAccessor->expects($this->once())
+                ->method('getConfig')
+                ->willReturn(null);
+        } else {
+            $configAccessor->expects($this->once())
+                ->method('getConfig')
+                ->with($className)
+                ->willReturn($config);
+        }
+
+        return $configAccessor;
     }
 
     /**
@@ -83,6 +116,20 @@ class MetadataTypeGuesserTest extends \PHPUnit_Framework_TestCase
         $associationMetadata->setDataType($dataType);
 
         return $associationMetadata;
+    }
+
+    public function testShouldGetPreviouslySetMetadataAccessor()
+    {
+        $metadataAccessor = $this->createMock('Oro\Bundle\ApiBundle\Metadata\MetadataAccessorInterface');
+        $this->typeGuesser->setMetadataAccessor($metadataAccessor);
+        self::assertSame($metadataAccessor, $this->typeGuesser->getMetadataAccessor());
+    }
+
+    public function testShouldGetPreviouslySetConfigAccessor()
+    {
+        $configAccessor = $this->createMock('Oro\Bundle\ApiBundle\Config\ConfigAccessorInterface');
+        $this->typeGuesser->setConfigAccessor($configAccessor);
+        self::assertSame($configAccessor, $this->typeGuesser->getConfigAccessor());
     }
 
     public function testGuessRequired()
@@ -175,7 +222,32 @@ class MetadataTypeGuesserTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(
             new TypeGuess(
                 'oro_api_entity',
-                ['metadata' => $associationMetadata],
+                ['metadata' => $associationMetadata, 'included_entities' => null],
+                TypeGuess::HIGH_CONFIDENCE
+            ),
+            $this->typeGuesser->guessType(self::TEST_CLASS, self::TEST_PROPERTY)
+        );
+    }
+
+    public function testGuessTypeForToOneAssociationWithIncludedEntities()
+    {
+        $metadata = new EntityMetadata();
+        $metadata->setClassName(self::TEST_CLASS);
+        $associationMetadata = $this->createAssociationMetadata(
+            self::TEST_PROPERTY,
+            'Test\TargetEntity',
+            false,
+            'integer'
+        );
+        $metadata->addAssociation($associationMetadata);
+        $includedEntities = $this->createMock(IncludedEntityCollection::class);
+
+        $this->typeGuesser->setMetadataAccessor($this->getMetadataAccessor($metadata));
+        $this->typeGuesser->setIncludedEntities($includedEntities);
+        $this->assertEquals(
+            new TypeGuess(
+                'oro_api_entity',
+                ['metadata' => $associationMetadata, 'included_entities' => $includedEntities],
                 TypeGuess::HIGH_CONFIDENCE
             ),
             $this->typeGuesser->guessType(self::TEST_CLASS, self::TEST_PROPERTY)
@@ -198,7 +270,350 @@ class MetadataTypeGuesserTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(
             new TypeGuess(
                 'oro_api_entity',
-                ['metadata' => $associationMetadata],
+                ['metadata' => $associationMetadata, 'included_entities' => null],
+                TypeGuess::HIGH_CONFIDENCE
+            ),
+            $this->typeGuesser->guessType(self::TEST_CLASS, self::TEST_PROPERTY)
+        );
+    }
+
+    public function testGuessTypeForToManyAssociationWithIncludedEntities()
+    {
+        $metadata = new EntityMetadata();
+        $metadata->setClassName(self::TEST_CLASS);
+        $associationMetadata = $this->createAssociationMetadata(
+            self::TEST_PROPERTY,
+            'Test\TargetEntity',
+            true,
+            'integer'
+        );
+        $metadata->addAssociation($associationMetadata);
+        $includedEntities = $this->createMock(IncludedEntityCollection::class);
+
+        $this->typeGuesser->setMetadataAccessor($this->getMetadataAccessor($metadata));
+        $this->typeGuesser->setIncludedEntities($includedEntities);
+        $this->assertEquals(
+            new TypeGuess(
+                'oro_api_entity',
+                ['metadata' => $associationMetadata, 'included_entities' => $includedEntities],
+                TypeGuess::HIGH_CONFIDENCE
+            ),
+            $this->typeGuesser->guessType(self::TEST_CLASS, self::TEST_PROPERTY)
+        );
+    }
+
+    public function testGuessTypeForArrayAssociationWithoutTargetMetadata()
+    {
+        $metadata = new EntityMetadata();
+        $metadata->setClassName(self::TEST_CLASS);
+        $associationMetadata = $this->createAssociationMetadata(
+            self::TEST_PROPERTY,
+            'Test\TargetEntity',
+            true,
+            'array'
+        );
+        $metadata->addAssociation($associationMetadata);
+
+        $config = new EntityDefinitionConfig();
+        $config->addField(self::TEST_PROPERTY);
+
+        $this->typeGuesser->setMetadataAccessor($this->getMetadataAccessor($metadata));
+        $this->typeGuesser->setConfigAccessor($this->getConfigAccessor(self::TEST_CLASS, $config));
+        $this->assertNull(
+            $this->typeGuesser->guessType(self::TEST_CLASS, self::TEST_PROPERTY)
+        );
+    }
+
+    public function testGuessTypeForArrayAssociationWithoutTargetConfig()
+    {
+        $metadata = new EntityMetadata();
+        $metadata->setClassName(self::TEST_CLASS);
+        $associationMetadata = $this->createAssociationMetadata(
+            self::TEST_PROPERTY,
+            'Test\TargetEntity',
+            true,
+            'array'
+        );
+        $metadata->addAssociation($associationMetadata);
+
+        $targetMetadata = new EntityMetadata();
+        $targetMetadata->setClassName('Test\TargetEntity');
+        $associationMetadata->setTargetMetadata($targetMetadata);
+
+        $this->typeGuesser->setMetadataAccessor($this->getMetadataAccessor($metadata));
+        $this->assertNull(
+            $this->typeGuesser->guessType(self::TEST_CLASS, self::TEST_PROPERTY)
+        );
+    }
+
+    public function testGuessTypeForArrayAssociationForNotManageableEntity()
+    {
+        $metadata = new EntityMetadata();
+        $metadata->setClassName(self::TEST_CLASS);
+        $associationMetadata = $this->createAssociationMetadata(
+            self::TEST_PROPERTY,
+            'Test\TargetEntity',
+            true,
+            'array'
+        );
+        $metadata->addAssociation($associationMetadata);
+
+        $targetMetadata = new EntityMetadata();
+        $targetMetadata->setClassName('Test\TargetEntity');
+        $associationMetadata->setTargetMetadata($targetMetadata);
+
+        $config = new EntityDefinitionConfig();
+        $associationConfig = $config->addField(self::TEST_PROPERTY)->getOrCreateTargetEntity();
+        $associationConfig->addField('childField');
+
+        $this->doctrineHelper->expects($this->once())
+            ->method('isManageableEntityClass')
+            ->with('Test\TargetEntity')
+            ->willReturn(false);
+
+        $this->typeGuesser->setMetadataAccessor($this->getMetadataAccessor($metadata));
+        $this->typeGuesser->setConfigAccessor($this->getConfigAccessor(self::TEST_CLASS, $config));
+        $this->assertEquals(
+            new TypeGuess(
+                'oro_api_collection',
+                [
+                    'entry_data_class' => 'Test\TargetEntity',
+                    'entry_type'       => 'oro_api_compound_entity',
+                    'entry_options'    => [
+                        'metadata' => $targetMetadata,
+                        'config'   => $associationConfig
+                    ]
+                ],
+                TypeGuess::HIGH_CONFIDENCE
+            ),
+            $this->typeGuesser->guessType(self::TEST_CLASS, self::TEST_PROPERTY)
+        );
+    }
+
+    public function testGuessTypeForArrayAssociationForManageableEntity()
+    {
+        $metadata = new EntityMetadata();
+        $metadata->setClassName(self::TEST_CLASS);
+        $associationMetadata = $this->createAssociationMetadata(
+            self::TEST_PROPERTY,
+            'Test\TargetEntity',
+            true,
+            'array'
+        );
+        $metadata->addAssociation($associationMetadata);
+
+        $targetMetadata = new EntityMetadata();
+        $targetMetadata->setClassName('Test\TargetEntity');
+        $associationMetadata->setTargetMetadata($targetMetadata);
+
+        $config = new EntityDefinitionConfig();
+        $associationConfig = $config->addField(self::TEST_PROPERTY)->getOrCreateTargetEntity();
+        $associationConfig->addField('childField');
+
+        $this->doctrineHelper->expects($this->once())
+            ->method('isManageableEntityClass')
+            ->with('Test\TargetEntity')
+            ->willReturn(true);
+
+        $this->typeGuesser->setMetadataAccessor($this->getMetadataAccessor($metadata));
+        $this->typeGuesser->setConfigAccessor($this->getConfigAccessor(self::TEST_CLASS, $config));
+        $this->assertEquals(
+            new TypeGuess(
+                'oro_api_entity_collection',
+                [
+                    'entry_data_class' => 'Test\TargetEntity',
+                    'entry_type'       => 'oro_api_compound_entity',
+                    'entry_options'    => [
+                        'metadata' => $targetMetadata,
+                        'config'   => $associationConfig
+                    ]
+                ],
+                TypeGuess::HIGH_CONFIDENCE
+            ),
+            $this->typeGuesser->guessType(self::TEST_CLASS, self::TEST_PROPERTY)
+        );
+    }
+
+    public function testGuessTypeForCollapsedArrayAssociationWithoutTargetMetadata()
+    {
+        $metadata = new EntityMetadata();
+        $metadata->setClassName(self::TEST_CLASS);
+        $associationMetadata = $this->createAssociationMetadata(
+            self::TEST_PROPERTY,
+            'Test\TargetEntity',
+            true,
+            'array'
+        );
+        $associationMetadata->setCollapsed();
+        $metadata->addAssociation($associationMetadata);
+
+        $this->typeGuesser->setMetadataAccessor($this->getMetadataAccessor($metadata));
+        $this->assertNull(
+            $this->typeGuesser->guessType(self::TEST_CLASS, self::TEST_PROPERTY)
+        );
+    }
+
+    public function testGuessTypeForCollapsedArrayAssociationWithoutChildFieldsAndAssociations()
+    {
+        $metadata = new EntityMetadata();
+        $metadata->setClassName(self::TEST_CLASS);
+        $associationMetadata = $this->createAssociationMetadata(
+            self::TEST_PROPERTY,
+            'Test\TargetEntity',
+            true,
+            'array'
+        );
+        $associationMetadata->setCollapsed();
+        $metadata->addAssociation($associationMetadata);
+
+        $targetMetadata = new EntityMetadata();
+        $targetMetadata->setClassName('Test\TargetEntity');
+        $associationMetadata->setTargetMetadata($targetMetadata);
+
+        $this->typeGuesser->setMetadataAccessor($this->getMetadataAccessor($metadata));
+        $this->assertNull(
+            $this->typeGuesser->guessType(self::TEST_CLASS, self::TEST_PROPERTY)
+        );
+    }
+
+    public function testGuessTypeForCollapsedArrayAssociationForNotManageableEntity()
+    {
+        $metadata = new EntityMetadata();
+        $metadata->setClassName(self::TEST_CLASS);
+        $associationMetadata = $this->createAssociationMetadata(
+            self::TEST_PROPERTY,
+            'Test\TargetEntity',
+            true,
+            'array'
+        );
+        $associationMetadata->setCollapsed();
+        $metadata->addAssociation($associationMetadata);
+
+        $targetMetadata = new EntityMetadata();
+        $targetMetadata->setClassName('Test\TargetEntity');
+        $targetMetadata->addField($this->createFieldMetadata('name', 'string'));
+        $associationMetadata->setTargetMetadata($targetMetadata);
+
+        $this->doctrineHelper->expects($this->once())
+            ->method('isManageableEntityClass')
+            ->with('Test\TargetEntity')
+            ->willReturn(false);
+
+        $this->typeGuesser->setMetadataAccessor($this->getMetadataAccessor($metadata));
+        $this->assertEquals(
+            new TypeGuess(
+                'oro_api_scalar_collection',
+                ['entry_data_class' => 'Test\TargetEntity', 'entry_data_property' => 'name'],
+                TypeGuess::HIGH_CONFIDENCE
+            ),
+            $this->typeGuesser->guessType(self::TEST_CLASS, self::TEST_PROPERTY)
+        );
+    }
+
+    public function testGuessTypeForCollapsedArrayAssociationForManageableEntity()
+    {
+        $metadata = new EntityMetadata();
+        $metadata->setClassName(self::TEST_CLASS);
+        $associationMetadata = $this->createAssociationMetadata(
+            self::TEST_PROPERTY,
+            'Test\TargetEntity',
+            true,
+            'array'
+        );
+        $associationMetadata->setCollapsed();
+        $metadata->addAssociation($associationMetadata);
+
+        $targetMetadata = new EntityMetadata();
+        $targetMetadata->setClassName('Test\TargetEntity');
+        $targetMetadata->addField($this->createFieldMetadata('name', 'string'));
+        $associationMetadata->setTargetMetadata($targetMetadata);
+
+        $this->doctrineHelper->expects($this->once())
+            ->method('isManageableEntityClass')
+            ->with('Test\TargetEntity')
+            ->willReturn(true);
+
+        $this->typeGuesser->setMetadataAccessor($this->getMetadataAccessor($metadata));
+        $this->assertEquals(
+            new TypeGuess(
+                'oro_api_entity_scalar_collection',
+                ['entry_data_class' => 'Test\TargetEntity', 'entry_data_property' => 'name'],
+                TypeGuess::HIGH_CONFIDENCE
+            ),
+            $this->typeGuesser->guessType(self::TEST_CLASS, self::TEST_PROPERTY)
+        );
+    }
+
+    public function testGuessTypeForCollapsedArrayAssociationWhenChildPropertyIsAssociation()
+    {
+        $metadata = new EntityMetadata();
+        $metadata->setClassName(self::TEST_CLASS);
+        $associationMetadata = $this->createAssociationMetadata(
+            self::TEST_PROPERTY,
+            'Test\TargetEntity',
+            true,
+            'array'
+        );
+        $associationMetadata->setCollapsed();
+        $metadata->addAssociation($associationMetadata);
+
+        $targetMetadata = new EntityMetadata();
+        $targetMetadata->setClassName('Test\TargetEntity');
+        $targetMetadata->addAssociation(
+            $this->createAssociationMetadata('association1', 'Test\TargetEntity1', false, 'integer')
+        );
+        $associationMetadata->setTargetMetadata($targetMetadata);
+
+        $this->doctrineHelper->expects($this->once())
+            ->method('isManageableEntityClass')
+            ->with('Test\TargetEntity')
+            ->willReturn(true);
+
+        $this->typeGuesser->setMetadataAccessor($this->getMetadataAccessor($metadata));
+        $this->assertEquals(
+            new TypeGuess(
+                'oro_api_entity_scalar_collection',
+                ['entry_data_class' => 'Test\TargetEntity', 'entry_data_property' => 'association1'],
+                TypeGuess::HIGH_CONFIDENCE
+            ),
+            $this->typeGuesser->guessType(self::TEST_CLASS, self::TEST_PROPERTY)
+        );
+    }
+
+    public function testGuessTypeForAssociationContainsNestedObject()
+    {
+        $metadata = new EntityMetadata();
+        $metadata->setClassName(self::TEST_CLASS);
+        $associationMetadata = $this->createAssociationMetadata(
+            self::TEST_PROPERTY,
+            'Test\TargetEntity',
+            true,
+            'array'
+        );
+        $metadata->addAssociation($associationMetadata);
+
+        $targetMetadata = new EntityMetadata();
+        $targetMetadata->setClassName('Test\TargetEntity');
+        $associationMetadata->setTargetMetadata($targetMetadata);
+
+        $config = new EntityDefinitionConfig();
+        $associationConfig = $config->addField(self::TEST_PROPERTY);
+        $associationConfig->setDataType('nestedObject');
+        $associationConfig->setPropertyPath(ConfigUtil::IGNORE_PROPERTY_PATH);
+        $associationConfig->setFormOptions(['data_class' => 'Test\TargetEntity']);
+        $associationTargetConfig = $associationConfig->getOrCreateTargetEntity();
+        $associationTargetConfig->addField('childField');
+
+        $this->typeGuesser->setMetadataAccessor($this->getMetadataAccessor($metadata));
+        $this->typeGuesser->setConfigAccessor($this->getConfigAccessor(self::TEST_CLASS, $config));
+        $this->assertEquals(
+            new TypeGuess(
+                'oro_api_compound_entity',
+                [
+                    'data_class' => 'Test\TargetEntity',
+                    'metadata'   => $targetMetadata,
+                    'config'     => $associationTargetConfig
+                ],
                 TypeGuess::HIGH_CONFIDENCE
             ),
             $this->typeGuesser->guessType(self::TEST_CLASS, self::TEST_PROPERTY)

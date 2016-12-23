@@ -4,7 +4,6 @@ namespace Oro\Bundle\ReminderBundle\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 
-use Oro\Bundle\DataAuditBundle\Metadata\Annotation as Oro;
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
 use Oro\Bundle\ReminderBundle\Model\SenderAwareReminderDataInterface;
@@ -24,7 +23,7 @@ use Oro\Bundle\UserBundle\Entity\User;
  * @Config(
  *      defaultValues={
  *          "entity"={
- *              "icon"="icon-bell"
+ *              "icon"="fa-bell-o"
  *          },
  *          "note"={
  *              "immutable"=true

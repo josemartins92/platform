@@ -20,13 +20,13 @@ define([
         /** @property */
         template: _.template(
             '<% if (sortable) { %>' +
-                '<a class="grid-header-cell-link" href="#">' +
-                    '<span class="grid-header-cell-label"><%- label %></span>' +
+                '<a class="grid-header-cell__link" href="#">' +
+                    '<span class="grid-header-cell__label"><%- label %></span>' +
                     '<span class="caret"></span>' +
                 '</a>' +
             '<% } else { %>' +
-                '<span class="grid-header-cell-label-container">' +
-                    '<span class="grid-header-cell-label"><%- label %></span>' +
+                '<span class="grid-header-cell__label-container">' +
+                    '<span class="grid-header-cell__label"><%- label %></span>' +
                 '</span>' +
             '<% } %>'
         ),
@@ -109,14 +109,18 @@ define([
             this.$el.empty();
 
             var label = this.column.get('label');
-            var abbreviation = textUtil.abbreviate(label, this.minWordsToAbbreviate);
 
-            this.isLabelAbbreviated = abbreviation !== label;
-
-            this.$el.toggleClass('abbreviated', this.isLabelAbbreviated);
+            if (this.column.get('shortenableLabel') !== false) {
+                label = textUtil.abbreviate(label, this.minWordsToAbbreviate);
+                this.isLabelAbbreviated = label !== this.column.get('label');
+                if (!this.isLabelAbbreviated) {
+                    // if abbreviation was not created -- add class to make label shorten over styles
+                    this.$el.addClass('shortenable-label');
+                }
+            }
 
             this.$el.append(this.template({
-                label: abbreviation,
+                label: label,
                 sortable: this.column.get('sortable')
             }));
 
@@ -179,7 +183,7 @@ define([
 
         onMouseEnter: function(e) {
             var _this = this;
-            var $label = this.$('.grid-header-cell-label');
+            var $label = this.$('.grid-header-cell__label');
 
             // measure text content
             var realWidth = $label[0].clientWidth;
@@ -214,7 +218,7 @@ define([
 
         onMouseLeave: function(e) {
             clearTimeout(this.hintTimeout);
-            var $label = this.$('.grid-header-cell-label');
+            var $label = this.$('.grid-header-cell__label');
             $label.popover('hide');
             $label.popover('destroy');
             this.popoverAdded = false;

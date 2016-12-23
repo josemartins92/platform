@@ -52,7 +52,8 @@ class OroEntityExtensionTest extends \PHPUnit_Framework_TestCase
                         'query' => [
                             'select' => [
                                 'expr'        => 'COALESCE(entity.regionText, region.name)',
-                                'return_type' => 'string'
+                                'return_type' => 'string',
+                                'translatable' => true
                             ],
                             'join'   => [
                                 'left' => [
@@ -70,10 +71,27 @@ class OroEntityExtensionTest extends \PHPUnit_Framework_TestCase
                                 'return_type'  => 'enum',
                                 'filter_by_id' => true,
                                 'label'        => 'test.product.groups.label',
+                                'translatable' => true,
                             ],
                             'join'   => [
                                 'left' => [
                                     ['join' => 'entity.groups', 'alias' => 'target']
+                                ]
+                            ]
+                        ]
+                    ],
+                    'category' => [
+                        'query' => [
+                            'select' => [
+                                'expr'         => 'target.name',
+                                'return_type'  => 'enum',
+                                'filter_by_id' => true,
+                                'label'        => 'test.product.category.label',
+                                'translatable' => true
+                            ],
+                            'join'   => [
+                                'left' => [
+                                    ['join' => 'entity.category', 'alias' => 'target']
                                 ]
                             ]
                         ]

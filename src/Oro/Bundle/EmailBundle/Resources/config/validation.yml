@@ -30,3 +30,11 @@ Oro\Bundle\EmailBundle\Form\Model\Email:
             - Oro\Bundle\EmailBundle\Validator\Constraints\EmailAddress: ~
         subject:
             - NotBlank:     ~
+        contexts:
+            - Valid:
+                traverse: false
+
+Oro\Bundle\EmailBundle\Entity\Mailbox:
+    properties:
+        origin:
+            - Oro\Bundle\EmailBundle\Validator\Constraints\MailboxOrigin: ~

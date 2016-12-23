@@ -8,8 +8,6 @@ use Doctrine\ORM\Query;
 
 use FOS\RestBundle\Util\Codes;
 
-use JMS\JobQueueBundle\Entity\Job;
-
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,6 +18,7 @@ use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
 
+use Oro\Bundle\EmailBundle\Async\Topics;
 use Oro\Bundle\EmailBundle\Cache\EmailCacheManager;
 use Oro\Bundle\EmailBundle\Entity\Manager\EmailManager;
 use Oro\Bundle\EmailBundle\Entity\Email;
@@ -27,6 +26,7 @@ use Oro\Bundle\EmailBundle\Entity\EmailAttachment;
 use Oro\Bundle\EmailBundle\Entity\EmailBody;
 use Oro\Bundle\EmailBundle\Entity\EmailUser;
 use Oro\Bundle\EmailBundle\Form\Model\Email as EmailModel;
+use Oro\Bundle\EmailBundle\Form\Model\SmtpSettingsFactory;
 use Oro\Bundle\EmailBundle\Decoder\ContentDecoder;
 use Oro\Bundle\EmailBundle\Provider\EmailRecipientsProvider;
 use Oro\Bundle\EmailBundle\Exception\LoadEmailBodyException;
@@ -34,8 +34,8 @@ use Oro\Bundle\EntityBundle\Tools\EntityRoutingHelper;
 use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
 use Oro\Bundle\DataGridBundle\Extension\MassAction\MassActionDispatcher;
 use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
-use Oro\Bundle\EmailBundle\Command\PurgeEmailAttachmentCommand;
 use Oro\Bundle\EmailBundle\Provider\EmailRecipientsHelper;
+use Oro\Component\MessageQueue\Client\MessageProducer;
 
 /**
  * Class EmailController
@@ -49,27 +49,29 @@ use Oro\Bundle\EmailBundle\Provider\EmailRecipientsHelper;
 class EmailController extends Controller
 {
     /**
+     * @Route("/check-smtp-connection", name="oro_email_check_smtp_connection")
+     */
+    public function checkSmtpConnectionAction(Request $request)
+    {
+        $smtpSettings = SmtpSettingsFactory::createFromRequest($request);
+        $smtpSettingsChecker = $this->get('oro_email.mailer.checker.smtp_settings');
+
+        return new JsonResponse(
+            $smtpSettingsChecker->checkConnection($smtpSettings)
+        );
+    }
+
+    /**
      * @Route("/purge-emails-attachments", name="oro_email_purge_emails_attachments")
      * @AclAncestor("oro_config_system")
      */
     public function purgeEmailsAttachmentsAction()
     {
-        $job = new Job(PurgeEmailAttachmentCommand::NAME);
-        $em = $this->getDoctrine()->getManagerForClass(Job::class);
-        $em->persist($job);
-        $em->flush();
+
+        $this->getMessageProducer()->send(Topics::PURGE_EMAIL_ATTACHMENTS, []);
 
         return new JsonResponse([
-            'message'    => $this->get('translator')->trans(
-                'oro.email.controller.job_scheduled.message',
-                [
-                    '%link%' => sprintf(
-                        '<a href="%s" class="job-view-link">%s</a>',
-                        $this->get('router')->generate('oro_cron_job_view', ['id' => $job->getId()]),
-                        $this->get('translator')->trans('oro.email.controller.job_progress')
-                    )
-                ]
-            ),
+            'message'    => $this->get('translator')->trans('oro.email.controller.job_scheduled.message'),
             'successful' => true,
         ]);
     }
@@ -105,19 +107,28 @@ class EmailController extends Controller
      */
     public function placeholderLastAction()
     {
-        $currentOrganization = $this->get('oro_security.security_facade')->getOrganization();
-        $maxEmailsDisplay = $this->container->getParameter('oro_email.flash_notification.max_emails_display');
-        $emailNotificationManager = $this->get('oro_email.manager.notification');
-
-        return [
-            'emails' => json_encode($emailNotificationManager->getEmails(
-                $this->getUser(),
-                $currentOrganization,
-                $maxEmailsDisplay,
-                null
-            )),
-            'count'=> $emailNotificationManager->getCountNewEmails($this->getUser(), $currentOrganization)
+        $result = [
+            'count' => 0,
+            'emails' => []
         ];
+
+        if ($this->get('oro_security.security_facade')->isGranted('oro_email_email_user_view')) {
+            $currentOrganization = $this->get('oro_security.security_facade')->getOrganization();
+            $maxEmailsDisplay = $this->container->getParameter('oro_email.flash_notification.max_emails_display');
+            $emailNotificationManager = $this->get('oro_email.manager.notification');
+
+            $result = [
+                'emails' => json_encode($emailNotificationManager->getEmails(
+                    $this->getUser(),
+                    $currentOrganization,
+                    $maxEmailsDisplay,
+                    null
+                )),
+                'count'=> $emailNotificationManager->getCountNewEmails($this->getUser(), $currentOrganization)
+            ];
+        }
+
+        return $result;
     }
 
     /**
@@ -140,16 +151,24 @@ class EmailController extends Controller
         if (!$maxEmailsDisplay) {
             $maxEmailsDisplay = $this->container->getParameter('oro_email.flash_notification.max_emails_display');
         }
-        $emailNotificationManager = $this->get('oro_email.manager.notification');
+
         $result = [
-            'count' => $emailNotificationManager->getCountNewEmails($this->getUser(), $currentOrganization, $folderId),
-            'emails' => $emailNotificationManager->getEmails(
-                $this->getUser(),
-                $currentOrganization,
-                $maxEmailsDisplay,
-                $folderId
-            )
+            'count' => 0,
+            'emails' => []
         ];
+
+        if ($this->get('oro_security.security_facade')->isGranted('oro_email_email_user_view')) {
+            $emailNotificationManager = $this->get('oro_email.manager.notification');
+            $result = [
+                'count' => $emailNotificationManager
+                    ->getCountNewEmails($this->getUser(), $currentOrganization, $folderId),
+                'emails' => $emailNotificationManager->getEmails(
+                    $this->getUser(),
+                    $currentOrganization,
+                    $maxEmailsDisplay,
+                    $folderId
+                )];
+        }
 
         return new JsonResponse($result);
     }
@@ -172,14 +191,22 @@ class EmailController extends Controller
      */
     public function threadWidgetAction(Email $entity)
     {
-        $emails = $this->get('oro_email.email.thread.provider')->getThreadEmails(
-            $this->get('doctrine')->getManager(),
-            $entity
-        );
+        $emails = [];
+        if ($this->getRequest()->get('showSingleEmail', false)) {
+            $emails[] = $entity;
+        } else {
+            $emails = $this->get('oro_email.email.thread.provider')->getThreadEmails(
+                $this->get('doctrine')->getManager(),
+                $entity
+            );
+        }
+
         $emails = array_filter($emails, function ($email) {
             return $this->get('security.context')->isGranted('VIEW', $email);
         });
         $this->loadEmailBody($emails);
+
+        $this->getEmailManager()->setSeenStatus($entity, true, true);
 
         return [
             'entity' => $entity,
@@ -370,11 +397,11 @@ class EmailController extends Controller
                 $width,
                 $height
             );
-            $content = (string)$thumbnail->getImage();
+            $content = $thumbnail->getBinary()->getContent();
             $fileManager->writeToStorage($content, $path);
         }
 
-        return new Response($content, 200, ['Content-Type' => $attachment->getContentType()]);
+        return new Response($content, Response::HTTP_OK, ['Content-Type' => $attachment->getContentType()]);
     }
 
     /**
@@ -810,5 +837,13 @@ class EmailController extends Controller
             ->isGranted('CREATE', 'entity:' . 'Oro\Bundle\AttachmentBundle\Entity\Attachment');
 
         return $enabledAttachment && $createGrant;
+    }
+
+    /**
+     * @return MessageProducer
+     */
+    private function getMessageProducer()
+    {
+        return $this->get('oro_message_queue.message_producer');
     }
 }

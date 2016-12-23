@@ -6,14 +6,15 @@ define([
     'cryptojs/sha256',
     'oroui/js/mediator',
     'bootstrap'
-], function($, _, tools, MultiUseResourceManager, CryptoJS, mediator) {
+], function($, _, tools, MultiUseResourceManager, SHA256, mediator) {
     'use strict';
 
     var defaults = {
         container: '',
         delay: false,
         template: $.noop,
-        insertMethod: 'appendTo'
+        insertMethod: 'appendTo',
+        style: 'default'
     };
     var queue = [];
     var groupedMessages = {};
@@ -25,7 +26,11 @@ define([
      */
     function showMessage(type, message, options) {
         var opt = _.extend({}, defaults, options || {});
-        var $el = $(opt.template({type: type, message: message}))[opt.insertMethod](opt.container);
+        var $el = $(opt.template({
+            type: type,
+            message: message,
+            style: opt.style
+        }))[opt.insertMethod](opt.container);
         if (opt.onClose) {
             $el.find('button.close').click(opt.onClose);
         }
@@ -110,7 +115,7 @@ define([
                 var namespace = (options || {}).namespace;
 
                 if (!namespace) {
-                    namespace = CryptoJS.SHA256(message + this.type).toString();
+                    namespace = SHA256(message + this.type).toString();
 
                     if (!options) {
                         options = {

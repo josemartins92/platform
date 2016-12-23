@@ -2,6 +2,7 @@
 
 namespace Oro\Bundle\ActivityBundle\Form\Type;
 
+use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManager;
 
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -14,9 +15,10 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Translation\TranslatorInterface;
 
+use Oro\Bundle\ActivityBundle\Event\PrepareContextTitleEvent;
 use Oro\Bundle\ActivityBundle\Form\DataTransformer\ContextsToViewTransformer;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
-use Oro\Bundle\SearchBundle\Resolver\EntityTitleResolverInterface;
+use Oro\Bundle\EntityBundle\Provider\EntityNameResolver;
 
 class ContextsSelectType extends AbstractType
 {
@@ -32,21 +34,21 @@ class ContextsSelectType extends AbstractType
     protected $translator;
 
     /* @var TokenStorageInterface */
-    protected $securityTokenStorage;
+    protected $tokenStorage;
 
     /** @var EventDispatcherInterface */
     protected $dispatcher;
 
-    /** @var EntityTitleResolverInterface */
-    protected $entityTitleResolver;
+    /** @var EntityNameResolver */
+    protected $entityNameResolver;
 
     /**
-     * @param EntityManager         $entityManager
-     * @param ConfigManager         $configManager
-     * @param TranslatorInterface   $translator
-     * @param TokenStorageInterface $securityTokenStorage
+     * @param EntityManager            $entityManager
+     * @param ConfigManager            $configManager
+     * @param TranslatorInterface      $translator
+     * @param TokenStorageInterface    $securityTokenStorage
      * @param EventDispatcherInterface $dispatcher
-     * @param EntityTitleResolverInterface $entityTitleResolver
+     * @param EntityNameResolver       $entityNameResolver
      */
     public function __construct(
         EntityManager $entityManager,
@@ -54,14 +56,14 @@ class ContextsSelectType extends AbstractType
         TranslatorInterface $translator,
         TokenStorageInterface $securityTokenStorage,
         EventDispatcherInterface $dispatcher,
-        EntityTitleResolverInterface $entityTitleResolver
+        EntityNameResolver $entityNameResolver
     ) {
-        $this->entityManager        = $entityManager;
-        $this->configManager        = $configManager;
-        $this->translator           = $translator;
-        $this->securityTokenStorage = $securityTokenStorage;
-        $this->dispatcher           = $dispatcher;
-        $this->entityTitleResolver  = $entityTitleResolver;
+        $this->entityManager      = $entityManager;
+        $this->configManager      = $configManager;
+        $this->translator         = $translator;
+        $this->tokenStorage       = $securityTokenStorage;
+        $this->dispatcher         = $dispatcher;
+        $this->entityNameResolver = $entityNameResolver;
     }
 
     /**
@@ -70,16 +72,12 @@ class ContextsSelectType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder->resetViewTransformers();
-        $builder->addViewTransformer(
-            new ContextsToViewTransformer(
-                $this->entityManager,
-                $this->configManager,
-                $this->translator,
-                $this->securityTokenStorage,
-                $this->dispatcher,
-                $this->entityTitleResolver
-            )
+        $contextsToViewTransformer = new ContextsToViewTransformer(
+            $this->entityManager,
+            $this->tokenStorage,
+            $options['collectionModel']
         );
+        $builder->addViewTransformer($contextsToViewTransformer);
     }
 
     /**
@@ -87,9 +85,84 @@ class ContextsSelectType extends AbstractType
      */
     public function buildView(FormView $view, FormInterface $form, array $options)
     {
-        $formData = $form->getViewData();
+        $view->vars['attr']['data-selected-data'] = $this->getSelectedData($form);
+    }
 
-        $view->vars['attr']['data-selected-data'] = $formData;
+    /**
+     * @param FormInterface $form
+     *
+     * @return string
+     */
+    protected function getSelectedData(FormInterface $form)
+    {
+        $targetEntities = $form->getData();
+        if (!$targetEntities) {
+            return '';
+        }
+
+        $result = [];
+        $user   = $this->tokenStorage->getToken()->getUser();
+        foreach ($targetEntities as $target) {
+            // Exclude current user
+            $targetClass = ClassUtils::getClass($target);
+            if (ClassUtils::getClass($user) === $targetClass && $user->getId() === $target->getId()) {
+                continue;
+            }
+
+            $title = $this->entityNameResolver->getName($target);
+            if ($label = $this->getClassLabel($targetClass)) {
+                $title .= ' (' . $label . ')';
+            }
+
+            $item['title'] = $title;
+            $item['targetId'] = $target->getId();
+            $event = new PrepareContextTitleEvent($item, $targetClass);
+            $this->dispatcher->dispatch(PrepareContextTitleEvent::EVENT_NAME, $event);
+            $item = $event->getItem();
+
+            $result[] = json_encode($this->getResult($item['title'], $target));
+        }
+
+        return implode(';', $result);
+    }
+
+    /**
+     * @param string $text
+     * @param object $object
+     *
+     * @return array
+     */
+    protected function getResult($text, $object)
+    {
+        return [
+            'text' => $text,
+            /**
+             * Selected Value Id should additionally encoded because it should be used as string key
+             * to compare with value
+             */
+            'id'   => json_encode(
+                [
+                    'entityClass' => ClassUtils::getClass($object),
+                    'entityId'    => $object->getId(),
+                ]
+            )
+        ];
+    }
+
+    /**
+     * @param string $className - FQCN
+     *
+     * @return string|null
+     */
+    protected function getClassLabel($className)
+    {
+        if (!$this->configManager->hasConfig($className)) {
+            return null;
+        }
+
+        $label = $this->configManager->getProvider('entity')->getConfig($className)->get('label');
+
+        return $this->translator->trans($label);
     }
 
     /**
@@ -108,7 +181,8 @@ class ContextsSelectType extends AbstractType
 
         $resolver->setDefaults([
             'tooltip' => false,
-            'configs' => $defaultConfigs
+            'configs' => $defaultConfigs,
+            'collectionModel' => false,
         ]);
 
         $resolver->setNormalizer(

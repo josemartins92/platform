@@ -22,8 +22,8 @@ class ActivityListItem extends Element
      */
     public function getActionLink($linkTitle)
     {
-        $this->find('css', 'div.actions a.dropdown-toggle')->mouseOver();
-        $links = $this->findAll('css', 'li.launcher-item a');
+        $this->find('css', 'div.activity-actions a.dropdown-toggle')->mouseOver();
+        $links = $this->findAll('css', 'li.activity-action a');
 
         /** @var NodeElement $link */
         foreach ($links as $link) {
@@ -38,7 +38,7 @@ class ActivityListItem extends Element
     public function deleteAllContexts()
     {
         foreach ($this->getContexts() as $context) {
-            $context->find('css', 'i.icon-remove')->click();
+            $context->find('css', 'i.fa-close')->click();
         }
     }
 
@@ -64,7 +64,7 @@ class ActivityListItem extends Element
         $this->getDriver()->waitForAjax();
 
         /** @var Form $form */
-        $form = $this->elementFactory->createElement('Comment');
+        $form = $this->elementFactory->createElement('Comment Form');
         $form->fill($table);
         $this->getPage()->find('css', '.ui-dialog-buttonpane .btn-primary')->press();
     }
@@ -83,7 +83,7 @@ class ActivityListItem extends Element
         $commentItem->clickActionLink('Update Comment');
 
         /** @var Form $form */
-        $form = $this->elementFactory->createElement('Comment');
+        $form = $this->elementFactory->createElement('Comment Form');
         $form->fill($table);
         $this->getPage()->find('css', '.ui-dialog-buttonpane .btn-primary')->press();
     }

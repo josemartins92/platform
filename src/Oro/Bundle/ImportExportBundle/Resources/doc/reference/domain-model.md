@@ -248,13 +248,13 @@ read from CSV file or one of the entities queries from Doctrine.
 Oro\Bundle\ImportExportBundle\Processor\ImportProcessor
 
 **Classes:**
-* **Context** - to manage export configuration and results
+* **Context** - to manage import configuration and results
 * **Serializer** - to deserialize output of Data Converter to entity object
 * **Data Converter** - to convert array of reader format to array of serializer format.
 * **Strategy** - to perform main logic of import with deserialized entity (Add/Update/Replace/Delete entities)
 
 **Options:**
-* **Class Name** - exported entity class
+* **Class Name** - imported entity class
 
 ### Export Processor
 **Class:**
@@ -363,7 +363,7 @@ Oro\Bundle\ImportExportBundle\Converter\AbstractTableDataConverter
 Abstract class that is responsible for headers and conversion rules.
 Can be extended and used in more complex use cases when you need to provide human readable
 names of headers in import/export files. Configured with the rules that will be used to convert data to import/export
-formats. See OroCRM\Bundle\ContactBundle\ImportExport\Converter\ContactDataConverter as an example of usage of this
+formats. See Oro\Bundle\ContactBundle\ImportExport\Converter\ContactDataConverter as an example of usage of this
 class.
 
 **Methods:**

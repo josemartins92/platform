@@ -118,6 +118,41 @@ class EmailOriginHelperTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expectedOrigin, $origin);
     }
 
+    public function testGetEmailOriginCache()
+    {
+        $email = 'test';
+        $organization = null;
+        $originName = InternalEmailOrigin::BAP;
+        $enableUseUserEmailOrigin = true;
+        $expectedOrigin = new \stdClass();
+        $owner = new \stdClass();
+
+        $this->emailOwnerProvider->expects($this->exactly(2))
+            ->method('findEmailOwner')
+            ->willReturn($owner);
+        $entityRepository = $this->getMockBuilder('Doctrine\ORM\EntityRepository')
+            ->disableOriginalConstructor()
+            ->getMock();
+        $entityRepository->expects($this->at(0))
+            ->method('findOneBy')
+            ->willReturn($expectedOrigin);
+        $entityRepository->expects($this->at(1))
+            ->method('findOneBy')
+            ->willReturn(null);
+        $this->em->expects($this->exactly(2))
+            ->method('getRepository')
+            ->willReturn($entityRepository);
+
+        $origin =
+            $this->emailOriginHelper->getEmailOrigin($email, $organization, $originName, $enableUseUserEmailOrigin);
+
+        $this->assertEquals($expectedOrigin, $origin);
+
+        $origin = $this->emailOriginHelper->getEmailOrigin($email, $organization, $originName, false);
+
+        $this->assertNull($origin);
+    }
+
     /**
      * @dataProvider findEmailOriginDataProvider
      *
@@ -139,7 +174,7 @@ class EmailOriginHelperTest extends \PHPUnit_Framework_TestCase
         $emailOriginsTimes,
         $exactly
     ) {
-        $organization  = $this->getMock('Oro\Bundle\OrganizationBundle\Entity\OrganizationInterface');
+        $organization  = $this->createMock('Oro\Bundle\OrganizationBundle\Entity\OrganizationInterface');
         $collection    = new ArrayCollection([$origin]);
         $originName    = 'origin name';
         $campaignOwner = null;

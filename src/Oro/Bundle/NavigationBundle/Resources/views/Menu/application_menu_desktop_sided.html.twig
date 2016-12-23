@@ -10,6 +10,8 @@
         {%- if item.level != 1 %}
         {%- set childrenClasses = childrenClasses|merge(['dropdown-menu']) %}
         {% endif -%}
+    {% elseif item.level == 1 %}
+        {%- set classes = classes|merge(['dropdown', 'dropdown-empty']) %}
     {% endif %}
     {% if item.extras is defined and item.extras.routes is defined and item.extras.routes[0] is defined %}
         {% if item.extras.routes|length > 1 %}
@@ -53,7 +55,7 @@
 
 {% block label %}
     {%- if item.level == 1 and not item.getExtra('icon') %}
-        <i class="icon-th"></i> {{ parent() }}
+        <i class="fa-th"></i> {{ parent() }}
     {% else %}
         {{ parent() }}
     {% endif -%}

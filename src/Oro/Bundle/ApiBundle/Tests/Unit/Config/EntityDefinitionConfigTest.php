@@ -110,6 +110,29 @@ class EntityDefinitionConfigTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals([], $config->toArray());
     }
 
+    public function testDocumentationResource()
+    {
+        $config = new EntityDefinitionConfig();
+        $this->assertFalse($config->hasDocumentationResource());
+        $this->assertNull($config->getDocumentationResource());
+
+        $config->setDocumentationResource('resource link');
+        $this->assertTrue($config->hasDocumentationResource());
+        $this->assertEquals('resource link', $config->getDocumentationResource());
+        $this->assertEquals(['documentation_resource' => 'resource link'], $config->toArray());
+
+        $config->setDocumentationResource(null);
+        $this->assertFalse($config->hasDocumentationResource());
+        $this->assertNull($config->getDocumentationResource());
+        $this->assertEquals([], $config->toArray());
+
+        $config->setDocumentationResource('resource link');
+        $config->setDocumentationResource('');
+        $this->assertFalse($config->hasDocumentationResource());
+        $this->assertNull($config->getDocumentationResource());
+        $this->assertEquals([], $config->toArray());
+    }
+
     public function testFields()
     {
         $config = new EntityDefinitionConfig();
@@ -309,6 +332,20 @@ class EntityDefinitionConfigTest extends \PHPUnit_Framework_TestCase
 
         $config->enableFieldset();
         $this->assertTrue($config->isFieldsetEnabled());
+        $this->assertEquals([], $config->toArray());
+    }
+
+    public function testMetaPropertiesFlag()
+    {
+        $config = new EntityDefinitionConfig();
+        $this->assertTrue($config->isMetaPropertiesEnabled());
+
+        $config->disableMetaProperties();
+        $this->assertFalse($config->isMetaPropertiesEnabled());
+        $this->assertEquals(['disable_meta_properties' => true], $config->toArray());
+
+        $config->enableMetaProperties();
+        $this->assertTrue($config->isMetaPropertiesEnabled());
         $this->assertEquals([], $config->toArray());
     }
 

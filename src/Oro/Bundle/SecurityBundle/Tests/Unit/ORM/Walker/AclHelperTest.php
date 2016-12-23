@@ -59,7 +59,7 @@ class AclHelperTest extends OrmTestCase
             );
         $criteria = new Criteria();
 
-        $eventDispatcher = $this->getMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
+        $eventDispatcher = $this->createMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
 
         $conditionalFactorBuilder = new AclConditionalFactorBuilder();
 
@@ -87,7 +87,7 @@ class AclHelperTest extends OrmTestCase
      */
     public function testApply(QueryBuilder $queryBuilder, $conditions, $resultHandler, $walkerResult, $exception)
     {
-        $eventDispatcher = $this->getMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
+        $eventDispatcher = $this->createMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
 
         $this->conditionBuilder = $this->getMockBuilder(
             'Oro\Bundle\SecurityBundle\ORM\Walker\OwnershipConditionDataBuilder'
@@ -127,7 +127,8 @@ class AclHelperTest extends OrmTestCase
 
         if ($exception) {
             list($class, $message) = $exception;
-            $this->setExpectedException($class, $message);
+            $this->expectException($class);
+            $this->expectExceptionMessage($message);
         }
         $this->assertNotEmpty($query->getSQL());
     }
@@ -384,7 +385,6 @@ class AclHelperTest extends OrmTestCase
         $this->assertEmpty($hints[AclWalker::ORO_ACL_CONDITION]->getWhereConditions());
         $joinCondition = $hints[AclWalker::ORO_ACL_CONDITION]->getJoinConditions()[0];
         $this->assertEquals([1], $joinCondition->getValue());
-
     }
 
     protected function resultWalker2(SelectStatement $resultAst)

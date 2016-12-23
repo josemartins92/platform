@@ -2,11 +2,11 @@
 
 namespace Oro\Bundle\DashboardBundle\Tests\Unit\Model;
 
+use Symfony\Component\HttpFoundation\Request;
+
 use Oro\Bundle\DashboardBundle\Entity\Widget;
 use Oro\Bundle\DashboardBundle\Model\WidgetConfigs;
 use Oro\Bundle\DashboardBundle\Model\WidgetOptionBag;
-
-use Symfony\Component\HttpFoundation\Request;
 
 class WidgetConfigsTest extends \PHPUnit_Framework_TestCase
 {
@@ -37,13 +37,9 @@ class WidgetConfigsTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $resolver = $this->createMock('Oro\Component\Config\Resolver\ResolverInterface');
 
-        $resolver = $this->getMock('Oro\Component\Config\Resolver\ResolverInterface');
-
-        $this->em = $this->getMock('Doctrine\ORM\EntityManagerInterface');
+        $this->em = $this->createMock('Doctrine\ORM\EntityManagerInterface');
 
         $this->valueProvider = $this->getMockBuilder('Oro\Bundle\DashboardBundle\Provider\ConfigValueProvider')
             ->disableOriginalConstructor()
@@ -61,16 +57,24 @@ class WidgetConfigsTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->eventDispatcher = $this->getMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
+        $this->eventDispatcher = $this->createMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
+
+        $widgetConfigVisibilityFilter = $this
+            ->getMockBuilder('Oro\Bundle\DashboardBundle\Filter\WidgetConfigVisibilityFilter')
+            ->disableOriginalConstructor()
+            ->getMock();
+        $widgetConfigVisibilityFilter->expects($this->any())
+            ->method('filterConfigs')
+            ->will($this->returnArgument(0));
 
         $this->widgetConfigs = new WidgetConfigs(
             $this->configProvider,
-            $securityFacade,
             $resolver,
             $this->em,
             $this->valueProvider,
             $this->translator,
-            $this->eventDispatcher
+            $this->eventDispatcher,
+            $widgetConfigVisibilityFilter
         );
 
         $this->widgetRepository = $this->getMockBuilder('Doctrine\ORM\EntityRepository')
