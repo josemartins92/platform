@@ -23,6 +23,7 @@ use Oro\Bundle\OrganizationBundle\Entity\BusinessUnit;
 use Oro\Bundle\OrganizationBundle\Entity\OrganizationInterface;
 use Oro\Bundle\UserBundle\Model\ExtendUser;
 use Oro\Bundle\UserBundle\Security\AdvancedApiUserInterface;
+use Sky\Bundle\UserBundle\Entity\JobPosition;
 
 /**
  * @SuppressWarnings(PHPMD.ExcessivePublicCount)
@@ -434,6 +435,26 @@ class User extends ExtendUser implements
      */
     protected $currentOrganization;
 
+
+    /**
+     * @var JobPosition[]|Collection
+     *
+     * @ORM\ManyToMany(targetEntity="Sky\Bundle\UserBundle\Entity\JobPosition")
+     * @ORM\JoinTable(name="leme_user_jobposition",
+     *      joinColumns={@ORM\JoinColumn(name="user_id", referencedColumnName="id", onDelete="CASCADE")},
+     *      inverseJoinColumns={@ORM\JoinColumn(name="leme_jobposition_id", referencedColumnName="id", onDelete="CASCADE")}
+     * )
+     * @ConfigField(
+     *      defaultValues={
+     *          "dataaudit"={
+     *              "auditable"=true
+     *          }
+     *      }
+     * )
+     */
+    protected $jobPositions;
+
+
     public function __construct()
     {
         parent::__construct();
@@ -444,6 +465,7 @@ class User extends ExtendUser implements
         $this->emailOrigins = new ArrayCollection();
         $this->apiKeys = new ArrayCollection();
         $this->groups = new ArrayCollection();
+        $this->jobPositions = new ArrayCollection();
     }
 
     /**
@@ -1188,4 +1210,53 @@ class User extends ExtendUser implements
     {
         return sprintf('%s %s', $this->getFirstName(), $this->getLastName());
     }
+
+    /**
+     * @param Collection|JobPosition[] $jobPositions
+     */
+    public function setJobPositions(Collection $jobPositions)
+    {
+        $this->jobPositions = $jobPositions;
+    }
+
+
+    /**
+     * @param Group $group
+     *
+     * @return User
+     */
+    public function addJobposition(Group $group)
+    {
+        if (!$this->getJobpositions()->contains($group)) {
+            $this->getJobpositions()->add($group);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param Group $group
+     *
+     * @return User
+     */
+    public function removeJobposition(Group $group)
+    {
+        if ($this->getJobpositions()->contains($group)) {
+            $this->getJobpositions()->removeElement($group);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection|JobPosition[]
+     */
+    public function getJobPositions()
+    {
+
+        $this->jobPositions = $this->jobPositions ?: new ArrayCollection();
+
+        return $this->jobPositions;
+    }
+
 }
